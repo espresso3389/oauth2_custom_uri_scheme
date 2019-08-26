@@ -5,3 +5,21 @@
 .pub/
 
 build/
+
+android/.idea/
+
+example/android/app/.project
+
+example/android/app/.classpath
+
+example/android/.project
+
+android/.settings/
+
+android/.project
+
+android/.classpath
+
+example/android/.settings/
+
+example/android/app/.settings/

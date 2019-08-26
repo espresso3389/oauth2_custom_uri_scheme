@@ -4,13 +4,28 @@ Demonstrates how to use the oauth2_custom_uri_scheme plugin.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+You should update `example/lib/main.dart` and `example/android/app/src/main/AndroidManifest.xml` (for Android) to use your OAuth server and client configurations:
 
-A few resources to get you started if this is your first Flutter project:
+```dart
+onPressed: () => AccessToken.authorize(
+    authorizationEndpoint: Uri.parse('https://example.com/authorize'),
+    tokenEndpoint: Uri.parse('https://example.com/token'),
+    // NOTE: For Android, we also have corresponding intent-filter entry on example/android/app/src/main/AndroidManifest.xml
+    redirectUri: Uri.parse('com.example.redirect43763246328://callback'),
+    clientId: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+    useBasicAuth: false,
+),
+```
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+```xml
+<intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <!-- Should match to the one on example/lib/main.dart -->
+    <data android:scheme="com.example.redirect43763246328" android:host="callback" />
+</intent-filter>
+```
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+For choosing good URL scheme, see [Security considerations](../README.md#security).

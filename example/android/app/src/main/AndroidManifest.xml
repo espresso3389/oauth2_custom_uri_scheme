@@ -28,6 +28,13 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- NOTE: For Android, we need android:scheme/android:host to specify our own custom URL scheme -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="ink.onboard.dx53g2" android:host="callback" />
+            </intent-filter>
         </activity>
     </application>
 </manifest>
