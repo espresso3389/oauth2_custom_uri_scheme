@@ -7,15 +7,17 @@ Demonstrates how to use the oauth2_custom_uri_scheme plugin.
 You should update `example/lib/main.dart` and `example/android/app/src/main/AndroidManifest.xml` (for Android) to use your OAuth server and client configurations:
 
 ```dart
-onPressed: () => AccessToken.authorize(
-    authorizationEndpoint: Uri.parse('https://example.com/authorize'),
-    tokenEndpoint: Uri.parse('https://example.com/token'),
-    // NOTE: For Android, we also have corresponding intent-filter entry on example/android/app/src/main/AndroidManifest.xml
-    redirectUri: Uri.parse('com.example.redirect43763246328://callback'),
-    clientId: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
-    useBasicAuth: false,
-),
+final oauth2Config = OAuth2Config(
+  uniqueId: 'example.com#1', // NOTE: ID to identify the credential for box session
+  authorizationEndpoint: Uri.parse('https://example.com/authorize'),
+  tokenEndpoint: Uri.parse('https://example.com/token'),
+  // revocationEndpoint is optional
+  revocationEndpoint: Uri.parse('https://example.com/revoke'),
+  // NOTE: For Android, we also have corresponding intent-filter entry on example/android/app/src/main/AndroidManifest.xml
+  redirectUri: Uri.parse('com.example.redirect43763246328://callback'),
+  clientId: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+  useBasicAuth: false);
 ```
 
 ```xml

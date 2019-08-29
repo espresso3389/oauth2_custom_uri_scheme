@@ -8,6 +8,10 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry.Registrar
+import android.content.Context.ACTIVITY_SERVICE
+import android.app.ActivityManager
+import android.os.Build
+
 
 class Oauth2CustomUriSchemePlugin(registrar: Registrar): MethodCallHandler {
 
@@ -51,6 +55,14 @@ class Oauth2CustomUriSchemePlugin(registrar: Registrar): MethodCallHandler {
       myIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
       registrar.view().context.startActivity(myIntent)
       result.success(null)
+    } else if (call.method == "activityCount") {
+      val activityManager = registrar.context().getSystemService(ACTIVITY_SERVICE) as ActivityManager
+      if (Build.VERSION.SDK_INT >= 23) {
+        val className = activityManager.appTasks.get(0).taskInfo.topActivity.className
+        result.success(if (className.indexOf("CustomTab") >= 0) 2 else 1)
+      } else {
+        result.success(0)
+      }
     } else {
         result.notImplemented()
     }

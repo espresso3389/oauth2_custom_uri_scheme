@@ -10,20 +10,30 @@ import 'package:http/http.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_custom_tabs/flutter_custom_tabs.dart' as customTab;
 
-/// Access token.
+/// [uri] is the URI of request invocation.
+/// [query] is the actual query passed to the URI.
+/// [statusCode] is the HTTP status code.
+/// [response] is the response returned by the server.
+typedef OAuth2ResponseCallback = void Function(Uri uri, Map<String, String> query, int statusCode, dynamic response);
+
+/// [OAuth 2.0 (RFC 6749)](https://tools.ietf.org/html/rfc6749) Access token.
 class AccessToken {
-  static final methodChannel = MethodChannel('oauth2_custom_uri_scheme');
-  static final eventChannel = EventChannel('oauth2_custom_uri_scheme/events');
-  static final Stream<dynamic> eventStream = eventChannel.receiveBroadcastStream();
+  static final _methodChannel = MethodChannel('oauth2_custom_uri_scheme');
+  static final _eventChannel = EventChannel('oauth2_custom_uri_scheme/events');
+  static final Stream<dynamic> _eventStream = _eventChannel.receiveBroadcastStream();
 
   /// Token endpoint URL.
   final Uri tokenEndpoint;
+  /// [Revocation (RFC 7009)](https://tools.ietf.org/html/rfc7009) endpoint URL if available.
+  final Uri revocationEndpoint;
   /// Wether the server can accept `Authorizaion: Basic` on HTTP header or not. Certain services does not support it.
   final bool useBasicAuth;
   final String _clientId;
   final String _clientSecret;
   DateTime _timeStamp;
   Map<String, dynamic> _fields;
+
+  final List<OAuth2ResponseCallback> responseCallbacks;
 
   /// `access_token`; the access token.
   String get accessToken => _fields['access_token'] as String;
@@ -48,14 +58,16 @@ class AccessToken {
     return false;
   }
 
-  AccessToken._({@required this.tokenEndpoint, @required this.useBasicAuth, @required String clientId, @required String clientSecret, DateTime timeStamp, Map<String, dynamic> fields}):
+  AccessToken._({@required this.tokenEndpoint, @required this.useBasicAuth, @required String clientId, @required String clientSecret, this.revocationEndpoint, DateTime timeStamp, Map<String, dynamic> fields, List<OAuth2ResponseCallback> responseCallbacks}):
     this._clientId = clientId,
     this._clientSecret = clientSecret,
     this._timeStamp = timeStamp ?? DateTime.now(),
-    this._fields = Map<String, dynamic>.unmodifiable(fields ?? {});
+    this._fields = Map<String, dynamic>.unmodifiable(fields ?? {}),
+    this.responseCallbacks = responseCallbacks ?? List<OAuth2ResponseCallback>();
 
   String serialize() => JsonEncoder().convert({
       'tokenEndpoint': tokenEndpoint.toString(),
+      'revocationEndpoint': revocationEndpoint?.toString(),
       'useBasicAuth': useBasicAuth,
       'clientId': _clientId,
       'clientSecret': _clientSecret,
@@ -71,6 +83,7 @@ class AccessToken {
     final json = JsonDecoder().convert(jsonStr);
     return AccessToken._(
       tokenEndpoint: Uri.parse(json['tokenEndpoint']),
+      revocationEndpoint:_uriParseNullSafe(json['revocationEndpoint']),
       useBasicAuth: json['useBasicAuth'],
       clientId: json['clientId'],
       clientSecret: json['clientSecret'],
@@ -79,9 +92,11 @@ class AccessToken {
     );
   }
 
+  static Uri _uriParseNullSafe(String uri) => uri != null ? Uri.parse(uri) : null;
+
   /// Authorize the user and return an [AccessToken] or null.
   /// If [idForCache] is specified, the token may be restored from cache and if a token is newly obtained, the token will be saved on the cache. See [AcecssTokenStore] for more.
-  static Future<AccessToken> authorize({@required Uri authorizationEndpoint, @required Uri tokenEndpoint, @required Uri redirectUri, @required String clientId, @required String clientSecret, String login, String scope, List<String> scopes, bool useBasicAuth = true, Map<String, String> additionalQueryParams, String idForCache, String storeId}) async {
+  static Future<AccessToken> authorize({@required Uri authorizationEndpoint, @required Uri tokenEndpoint, Uri revocationEndpoint, @required Uri redirectUri, @required String clientId, @required String clientSecret, String login, String scope, List<String> scopes, bool useBasicAuth = true, Map<String, String> additionalQueryParams, String idForCache, String storeId, OAuth2ResponseCallback responseCallback}) async {
 
     if (idForCache != null) {
       final cachedToken = await AccessTokenStore.fromId(storeId).getSavedToken(id: idForCache);
@@ -117,35 +132,53 @@ class AccessToken {
 
     final authUrl = authorizationEndpoint.replace(queryParameters: queryParams);
 
-    String query;
+    String redUrlStr;
     if (Platform.isAndroid) {
-      await methodChannel.invokeMethod('customScheme', redirectUri.scheme);
+      await _methodChannel.invokeMethod('customScheme', redirectUri.scheme);
       customTab.launch(authUrl.toString(), option: customTab.CustomTabsOption());
+      await Future.delayed(Duration(seconds: 2));
       final completer = Completer<String>();
-      final sub = eventStream.listen((data) async {
+      final sub = _eventStream.listen((data) async {
         if (data['type'] == 'url') {
           completer.complete(data['url']?.toString());
         }
       });
-      final redUrl = Uri.parse(await completer.future);
-      query = redUrl.query;
+
+      while (true) {
+        await Future.delayed(Duration(milliseconds: 300));
+        final activityCount = await _methodChannel.invokeMethod('activityCount') as int;
+        if (activityCount == 0) {
+          print('FIXME: For SDK version < 23, we could not determine whether Custom Chrome Tab cancellation...');
+          break; // could not monitor CustomTabActivity...
+        } else if (activityCount == 1) {
+          print('Custom Chrome Tab seems to be closed.');
+          if (!completer.isCompleted)
+            completer.complete(null); // canceled
+          break;
+        }
+      }
+
+      redUrlStr = await completer.future;
       sub.cancel();
       // Closing Chrome custom tab that is shown over our Flutter's Activity
-      await methodChannel.invokeMethod('closeChrome');
+      await _methodChannel.invokeMethod('closeChrome');
+    } else if (Platform.isIOS) {
+      redUrlStr = await _methodChannel.invokeMethod<String>('authSession', {'url': authUrl.toString(), 'customScheme': redirectUri.scheme});
     } else {
-      final redUrl = Uri.parse(await methodChannel.invokeMethod<String>(
-        'authSession', {'url': authUrl.toString(), 'customScheme': redirectUri.scheme}));
-      query = redUrl.query;
+      throw Exception('Platform not supported.');
+    }
+    if (redUrlStr == null) {
+      return null;
     }
 
-    final params = Uri.splitQueryString(query);
+    final params = Uri.splitQueryString(Uri.parse(redUrlStr).query);
     if (params['state'] != state) {
       // state is different; possible authorization code injection attack.
       throw Exception('state not match; possible authorization code injection.');
     }
 
-    final token = AccessToken._(useBasicAuth: useBasicAuth, tokenEndpoint: tokenEndpoint, clientId: clientId, clientSecret: clientSecret);
-    if (!await token._updateToken({'grant_type': 'authorization_code', 'code': params['code'], 'code_verifier': codeVerifier})) {
+    final token = AccessToken._(useBasicAuth: useBasicAuth, tokenEndpoint: tokenEndpoint, revocationEndpoint: revocationEndpoint, clientId: clientId, clientSecret: clientSecret, responseCallbacks: [responseCallback]);
+    if (!await token._updateToken(query: {'grant_type': 'authorization_code', 'code': params['code'], 'code_verifier': codeVerifier})) {
       return null;
     }
 
@@ -157,20 +190,42 @@ class AccessToken {
   }
 
   /// Refresh access token immediately.
-  Future<bool> refresh() => _updateToken({ 'grant_type': 'refresh_token', 'refresh_token': refreshToken });
+  Future<bool> refresh({OAuth2ResponseCallback responseCallback}) => _updateToken(query: { 'grant_type': 'refresh_token', 'refresh_token': refreshToken }, responseCallback: responseCallback);
 
   /// Refresh access token if needed.
   /// Because [expiry] is calculated on client side after receiving the access token, the access token may be invalidated a little before
   /// it; if [error] is set, the access token is refreshed before the calculated [expiry].
-  Future<bool> refreshIfNeeded({Duration error}) async {
+  Future<bool> refreshIfNeeded({Duration error, OAuth2ResponseCallback responseCallback}) async {
     error ??= Duration(seconds: 30);
     if (expiry.subtract(error).compareTo(DateTime.now()) < 0)
-      return await refresh();
+      return await refresh(responseCallback: responseCallback);
     return false;
   }
 
-  Future<bool> _updateToken(Map<String, String> query) async {
-    final tokenReq = Request('POST', tokenEndpoint);
+  Future<dynamic> revoke({OAuth2ResponseCallback responseCallback}) async {
+    if (revocationEndpoint == null) {
+      return null;
+    }
+    final err1 = await _sendRequest(revocationEndpoint, query: {'token': refreshToken, 'token_type_hint': 'refresh_token'}, responseCallback: responseCallback);
+    if (err1 is Map<String, dynamic> && err1['error'] != null) {
+      return err1;
+    }
+    final err2 = await _sendRequest(revocationEndpoint, query: {'token': accessToken, 'token_type_hint': 'access_token'}, responseCallback: responseCallback);
+    if (err2 is Map<String, dynamic> && err2['error'] != null) {
+      return err2;
+    }
+  }
+
+  Future<bool> _updateToken({Map<String, String> query, OAuth2ResponseCallback responseCallback}) async {
+    final res = await _sendRequest(tokenEndpoint, query: query, responseCallback: responseCallback);
+    final result = _validateAndSetFields(res);
+    _timeStamp = DateTime.now();
+    return result;
+  }
+
+  Future<dynamic> _sendRequest(Uri endpoint, {Map<String, String> query, OAuth2ResponseCallback responseCallback}) async {
+    query ??= Map<String, String>();
+    final tokenReq = Request('POST', endpoint);
     if (useBasicAuth) {
       tokenReq.headers['Authorization'] = 'Basic ' + base64.encode('$_clientId:$_clientSecret'.codeUnits);
     } else {
@@ -178,9 +233,18 @@ class AccessToken {
       query['client_secret'] = _clientSecret;
     }
     tokenReq.bodyFields = query;
-    final res = JsonDecoder().convert(await (await tokenReq.send()).stream.bytesToString());
-    final result = _validateAndSetFields(res);
-    _timeStamp = DateTime.now();
+    final res = await tokenReq.send();
+    final resStr = await res.stream.bytesToString();
+    dynamic result;
+    try {
+      result = JsonDecoder().convert(resStr);
+    } catch (e) {
+      result = resStr;
+    }
+    responseCallback?.call(endpoint, query, res.statusCode, result);
+    for (var callback in responseCallbacks) {
+      callback?.call(endpoint, query, res.statusCode, result);
+    }
     return result;
   }
 

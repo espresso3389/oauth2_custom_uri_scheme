@@ -33,7 +33,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="ink.onboard.dx53g2" android:host="callback" />
+                <data android:scheme="com.example.redirect43763246328" android:host="callback" />
             </intent-filter>
         </activity>
     </application>

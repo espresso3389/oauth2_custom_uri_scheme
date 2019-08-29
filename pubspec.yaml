@@ -1,6 +1,6 @@
 name: oauth2_custom_uri_scheme
 description: An implementation of OAuth 2.0 authorization code grant with redirection to application specific custom URL scheme.
-version: 0.1.1
+version: 0.2.0
 author: Takashi Kawasaki <espresso3389@gmail.com>
 homepage: https://github.com/espresso3389/oauth2_custom_uri_scheme
 
@@ -13,6 +13,7 @@ dependencies:
   crypto: ^2.1.2
   flutter_custom_tabs: ^0.6.0
   http: ^0.12.0+2
+  rxdart: ^0.22.2
   flutter_secure_storage: ^3.2.1+1
 
 dev_dependencies:
