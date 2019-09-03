@@ -53,7 +53,10 @@ class AccessToken {
   bool _validateAndSetFields(Map<String, dynamic> fields) {
     if (fields['access_token'] is String && fields['token_type'] is String && fields['expires_in'] is int && fields['refresh_token'] is String) {
       _fields = Map<String, dynamic>.unmodifiable(fields);
+      print('access_token successfully updated.');
       return true;
+    } else {
+      print('unexpected token endpoint response: $fields');
     }
     return false;
   }
@@ -217,10 +220,20 @@ class AccessToken {
   }
 
   Future<bool> _updateToken({Map<String, String> query, OAuth2ResponseCallback responseCallback}) async {
-    final res = await _sendRequest(tokenEndpoint, query: query, responseCallback: responseCallback);
-    final result = _validateAndSetFields(res);
-    _timeStamp = DateTime.now();
-    return result;
+    try {
+      final res = await _sendRequest(tokenEndpoint, query: query, responseCallback: responseCallback);
+      final error = res['error'];
+      if (error != null) {
+        final errorDesc = res['error_description'];
+        print('_updateToken failed: $error: $errorDesc');
+        return false;
+      }
+      final result = _validateAndSetFields(res);
+      _timeStamp = DateTime.now();
+      return result;
+    } catch (e, s) {
+      print('_updateToken failed: $e\n$s');
+    }
   }
 
   Future<dynamic> _sendRequest(Uri endpoint, {Map<String, String> query, OAuth2ResponseCallback responseCallback}) async {
@@ -255,21 +268,48 @@ class AccessToken {
 
   /// Create a new HTTP request with bearer token. The function may refresh the token if needed.
   /// [method] is either `GET`, `POST`, `PUT`, or ...
-  Future<Request> createRequest(String method, Uri uri) async {
+  Future<Request> createRequest(String method, Uri uri, {Map<String, dynamic> json}) async {
     await refreshIfNeeded();
     final req = Request(method, uri);
     req.headers['Authorization'] = 'Bearer $accessToken';
+    if (json != null) {
+      req.headers['Content-Type'] = 'application/json; charset=utf-8';
+      req.body = jsonEncode(json);
+    }
     return req;
   }
 
-  /// Fetch (`GET`) the specified URL.
-  Future<ByteStream> getByteStreamFromUri(Uri uri) async => (await (await createRequest('GET', uri)).send()).stream;
+  /// Send a HTTP request with JSON and obtain [ByteStream].
+  Future<ByteStream> requestByteStreamWithJson({@required String method, @required Uri uri, @required Map<String, dynamic> json, bool neverThrowOnNon2XX}) async {
+    final req = await createRequest(method, uri, json: json);
+    final res = await req.send();
+    if (res.statusCode ~/ 100 != 2 && neverThrowOnNon2XX != true) {
+      throw Exception('HTTP request failed (${res.statusCode}): $method $uri');
+    }
+    return res.stream;
+  }
+
+  /// Send a HTTP request with JSON and obtain [String].
+  Future<String> requestStringWithJson({@required String method, @required Uri uri, @required Map<String, dynamic> json, bool neverThrowOnNon2XX}) async => await (await requestByteStreamWithJson(method: method, uri: uri, json: json, neverThrowOnNon2XX: neverThrowOnNon2XX)).bytesToString();
+
+  /// Send a HTTP request with JSON and obtain JSON.
+  Future<dynamic> requestJsonWithJson({@required String method, @required Uri uri, @required Map<String, dynamic> json, bool neverThrowOnNon2XX}) async => jsonDecode(await requestStringWithJson(method: method, uri: uri, json: json, neverThrowOnNon2XX: neverThrowOnNon2XX));
 
   /// Fetch (`GET`) the specified URL.
-  Future<String> getStringFromUri(Uri uri) async => await (await getByteStreamFromUri(uri)).bytesToString();
+  Future<ByteStream> getByteStreamFromUri(Uri uri, {bool neverThrowOnNon2XX}) async {
+    final req = await createRequest('GET', uri);
+    final res = await req.send();
+    if (res.statusCode ~/ 100 != 2 && neverThrowOnNon2XX != true) {
+      throw Exception('HTTP request failed (${res.statusCode}): GET $uri');
+    }
+    return res.stream;
+  }
 
   /// Fetch (`GET`) the specified URL.
-  Future<dynamic> getJsonFromUri(Uri uri) async => JsonDecoder().convert(await getStringFromUri(uri));
+  Future<String> getStringFromUri(Uri uri, {bool neverThrowOnNon2XX}) async => await (await getByteStreamFromUri(uri, neverThrowOnNon2XX: neverThrowOnNon2XX)).bytesToString();
+
+  /// Fetch (`GET`) the specified URL.
+  Future<dynamic> getJsonFromUri(Uri uri, {bool neverThrowOnNon2XX}) async => jsonDecode(await getStringFromUri(uri, neverThrowOnNon2XX: neverThrowOnNon2XX));
 
   ///  high-entropy cryptographic random string defined [RFC7636 Section 4.1](https://tools.ietf.org/html/rfc7636#section-4.1).
   static String _cryptRandom(int length) {
@@ -344,4 +384,61 @@ class AccessTokenStore {
     await storage.write(key: key, value: token.serialize());
     return true;
   }
+}
+
+/// [OAuth 2.0 (RFC 6749)](https://tools.ietf.org/html/rfc6749) configuration.
+class OAuth2Config {
+  /// ID to uniquely identify the usage of the access token. It is also used as an ID for caching the access token.
+  final String uniqueId;
+  final Uri authorizationEndpoint;
+  final Uri tokenEndpoint;
+  final Uri revocationEndpoint;
+  final Uri redirectUri;
+  /// Client ID
+  final String clientId;
+  /// Client secret.
+  /// Please be aware of the risk when you embed your client secret to your app directly.
+  /// **Certain reverse engineering tools can extract plain strings in the app code and your secret may be obtained by others.**
+  /// And therefore apps installed on client devices are called "public" clients. See [RFC 6749 2.1. Client Types](https://tools.ietf.org/html/rfc6749#section-2.1) for more info.
+  final String clientSecret;
+  final String login;
+  /// Space delimited scope values. Mutually exclusive with [scopes].
+  final String scope;
+  /// Scope values. Mutually exclusive with [scope].
+  final List<String> scopes;
+  final bool useBasicAuth;
+  /// Additional query params that are not directly supported by the plugin.
+  final Map<String, String> additionalQueryParams;
+  final String storeId;
+  final OAuth2ResponseCallback responseCallback;
+
+  OAuth2Config({@required this.uniqueId, @required this.authorizationEndpoint, @required this.tokenEndpoint, this.revocationEndpoint, @required this.redirectUri, @required this.clientId, @required this.clientSecret, this.login, this.scope, this.scopes, this.useBasicAuth = true, this.additionalQueryParams, this.storeId, this.responseCallback});
+
+  Future<AccessToken> getAccessTokenFromCache() => AccessTokenStore.fromId(storeId).getSavedToken(id: uniqueId);
+
+  /// Start authorization process. It may return cached access token if [uniqueId] is set.
+  /// If [reset] is true, authorization clears the cache before authorization and it always do interactive authorization.
+  Future<AccessToken> authorize({bool reset = true}) async {
+    if (reset) {
+      await AccessTokenStore.fromId(storeId).removeSavedTokens(ids: [uniqueId]);
+    }
+    return await AccessToken.authorize(
+      authorizationEndpoint: authorizationEndpoint,
+      tokenEndpoint: tokenEndpoint,
+      revocationEndpoint: revocationEndpoint,
+      redirectUri: redirectUri,
+      clientId: clientId,
+      clientSecret: clientSecret,
+      login: login,
+      scope: scope,
+      scopes: scopes,
+      useBasicAuth: useBasicAuth,
+      additionalQueryParams: additionalQueryParams,
+      idForCache: uniqueId,
+      storeId: storeId,
+      responseCallback: responseCallback);
+  }
+
+  /// Delete cached token.
+  Future<void> reset() => AccessTokenStore.fromId(storeId).removeSavedTokens(ids: [uniqueId]);
 }

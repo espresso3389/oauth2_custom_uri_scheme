@@ -18,12 +18,17 @@ So the implementation fully works on Android with API level >= 23 and iOS >= 11.
 
 ```yaml
 dependencies:
-  oauth2_custom_uri_scheme: ^0.2.0
+  oauth2_custom_uri_scheme: ^0.3.1
 ```
 
 ## Getting Started
 
 ```dart
+import 'package:oauth2_custom_uri_scheme/oauth2_custom_uri_scheme.dart';
+import 'package:oauth2_custom_uri_scheme/oauth2_token_holder.dart';
+
+...
+
 //
 // OAuth2Config can be app global to keep the OAuth configuration
 //

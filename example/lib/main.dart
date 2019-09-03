@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:oauth2_custom_uri_scheme/oauth2_custom_uri_scheme.dart';
 import 'package:oauth2_custom_uri_scheme/oauth2_token_holder.dart';
 
 void main() => runApp(MyApp());

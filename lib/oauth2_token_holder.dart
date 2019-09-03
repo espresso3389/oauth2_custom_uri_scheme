@@ -4,58 +4,9 @@ import 'package:rxdart/rxdart.dart';
 
 import 'oauth2_custom_uri_scheme.dart';
 
+/// if [reset] is true, authorization clears the cache before authorization and it always do interactive authorization.
 typedef Authorize = Future<AccessToken> Function({bool reset});
 typedef Deauthorize = Future<void> Function();
-
-/// [OAuth 2.0 (RFC 6749)](https://tools.ietf.org/html/rfc6749) configuration.
-class OAuth2Config {
-  /// ID to uniquely identify the usage of the access token. It is also used as an ID for caching the access token.
-  final String uniqueId;
-  final Uri authorizationEndpoint;
-  final Uri tokenEndpoint;
-  final Uri revocationEndpoint;
-  final Uri redirectUri;
-  final String clientId;
-  final String clientSecret;
-  final String login;
-  /// Space delimited scope values. Mutually exclusive with [scopes].
-  final String scope;
-  /// Scope values. Mutually exclusive with [scope].
-  final List<String> scopes;
-  final bool useBasicAuth;
-  /// Additional query params that are not directly supported by the plugin.
-  final Map<String, String> additionalQueryParams;
-  final String storeId;
-  final OAuth2ResponseCallback responseCallback;
-
-  OAuth2Config({@required this.uniqueId, @required this.authorizationEndpoint, @required this.tokenEndpoint, this.revocationEndpoint, @required this.redirectUri, @required this.clientId, @required this.clientSecret, this.login, this.scope, this.scopes, this.useBasicAuth = true, this.additionalQueryParams, this.storeId, this.responseCallback});
-
-  Future<AccessToken> getAccessTokenFromCache() => AccessTokenStore.fromId(storeId).getSavedToken(id: uniqueId);
-
-  Future<AccessToken> authorize({bool reset = true}) async {
-    if (reset) {
-      await AccessTokenStore.fromId(storeId).removeSavedTokens(ids: [uniqueId]);
-    }
-    return await AccessToken.authorize(
-      authorizationEndpoint: authorizationEndpoint,
-      tokenEndpoint: tokenEndpoint,
-      revocationEndpoint: revocationEndpoint,
-      redirectUri: redirectUri,
-      clientId: clientId,
-      clientSecret: clientSecret,
-      login: login,
-      scope: scope,
-      scopes: scopes,
-      useBasicAuth: useBasicAuth,
-      additionalQueryParams: additionalQueryParams,
-      idForCache: uniqueId,
-      storeId: storeId,
-      responseCallback: responseCallback);
-  }
-
-  /// Delete cached token.
-  Future<void> reset() => AccessTokenStore.fromId(storeId).removeSavedTokens(ids: [uniqueId]);
-}
 
 enum OAuth2TokenAvailability {
   NotAvailable,
@@ -71,7 +22,7 @@ class OAuth2TokenHolder extends StatefulWidget {
   /// [accessToken] is either valid access token or null.
   /// [availability] indicate the current access token availability status.
   /// [authorize] is a function that can be used to authorize the app.
-  /// [deauthorize] is a function that can be used to deauthorize the app; if revocation is supported, it also revokes the tokens.
+  /// [deauthorize] is a function that can be used to deauthorize the app; if revocation is supported, it also revokes the tokens. Please note that [deauthorize] does not interact with user before deauthorization.
   final Widget Function(BuildContext context, AccessToken accessToken, OAuth2TokenAvailability availability, Authorize authorize, Deauthorize deauthorize, Widget child) builder;
   final Widget child;
 
