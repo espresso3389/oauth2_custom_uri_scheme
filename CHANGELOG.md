@@ -1,4 +1,8 @@
-## 0.3.3
+## 0.3.4
+
+* Minor fixes.
+
+## 0.3.4
 
 * `refresh` throws exception if it could not refresh the token.
 * Add `AccessToken.printHandler` static variable to customize debug log verbosity.

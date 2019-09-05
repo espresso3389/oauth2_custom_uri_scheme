@@ -18,7 +18,7 @@ So the implementation fully works on Android with API level >= 23 and iOS >= 11.
 
 ```yaml
 dependencies:
-  oauth2_custom_uri_scheme: ^0.3.3
+  oauth2_custom_uri_scheme: ^0.3.4
 ```
 
 ## Getting Started
