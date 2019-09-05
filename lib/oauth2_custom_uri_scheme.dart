@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:core';
+import 'dart:core' as core;
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -16,11 +18,36 @@ import 'package:flutter_custom_tabs/flutter_custom_tabs.dart' as customTab;
 /// [response] is the response returned by the server.
 typedef OAuth2ResponseCallback = void Function(Uri uri, Map<String, String> query, int statusCode, dynamic response);
 
+/// [object] is the object to print.
+/// [acccessToken] is [AccessToken] object unless the message is from static function call.
+/// [stackTrace] may be the stack trace if the message is an exception like thing; otherwise null.
+typedef AccessTokenPrintHandler = void Function(Object object, AccessToken accessToken, StackTrace stackTrace);
+
 /// [OAuth 2.0 (RFC 6749)](https://tools.ietf.org/html/rfc6749) Access token.
 class AccessToken {
   static final _methodChannel = MethodChannel('oauth2_custom_uri_scheme');
   static final _eventChannel = EventChannel('oauth2_custom_uri_scheme/events');
   static final Stream<dynamic> _eventStream = _eventChannel.receiveBroadcastStream();
+
+  static AccessTokenPrintHandler _printHandler;
+
+  /// All [print] calls are finally redirected to the handler if set.
+  /// [accessToken] is set if called from non-static function.
+  /// [stackTrace] is set if the call is for exception or such.
+  static set printHandler(AccessTokenPrintHandler handler) {
+    _printHandler = handler;
+  }
+
+  static void _print(Object object, {AccessToken accessToken, StackTrace stackTrace}) {
+    if (_printHandler != null) {
+      _printHandler(object, accessToken, stackTrace);
+    } else {
+      core.print(object);
+    }
+  }
+
+  /// By default, the [object] is forwareded to [core.print]. But you can change the behavior by settings [printHandler].
+  void print(Object object, {StackTrace stackTrace}) => _print(object, accessToken: this, stackTrace: stackTrace);
 
   /// Token endpoint URL.
   final Uri tokenEndpoint;
@@ -37,7 +64,7 @@ class AccessToken {
 
   /// `access_token`; the access token.
   String get accessToken => _fields['access_token'] as String;
-  /// `token_type`; token type. Normally, it is `Bearer`.
+  /// `token_type`; token type. Normally, it is `bearer`.
   String get tokenType => _fields['token_type'] as String;
   /// `expires_in`; the token's life time in seconds.
   int get expiresIn => _fields['expires_in'] as int;
@@ -50,15 +77,13 @@ class AccessToken {
   /// When the access token is obtained.
   DateTime get timeStamp => _timeStamp;
 
-  bool _validateAndSetFields(Map<String, dynamic> fields) {
-    if (fields['access_token'] is String && fields['token_type'] is String && fields['expires_in'] is int && fields['refresh_token'] is String) {
-      _fields = Map<String, dynamic>.unmodifiable(fields);
+  void _validateAndSetFields(Map<String, dynamic> fields) {
+    if (fields['access_token'] is String && fields['token_type'] is String && fields['expires_in'] is int) {
+      _fields = Map<String, dynamic>.unmodifiable(Map<String, dynamic>.from(_fields)..addAll(fields));
       print('access_token successfully updated.');
-      return true;
     } else {
-      print('unexpected token endpoint response: $fields');
+      throw Exception('unexpected token endpoint response: $fields');
     }
-    return false;
   }
 
   AccessToken._({@required this.tokenEndpoint, @required this.useBasicAuth, @required String clientId, @required String clientSecret, this.revocationEndpoint, DateTime timeStamp, Map<String, dynamic> fields, List<OAuth2ResponseCallback> responseCallbacks}):
@@ -100,108 +125,112 @@ class AccessToken {
   /// Authorize the user and return an [AccessToken] or null.
   /// If [idForCache] is specified, the token may be restored from cache and if a token is newly obtained, the token will be saved on the cache. See [AcecssTokenStore] for more.
   static Future<AccessToken> authorize({@required Uri authorizationEndpoint, @required Uri tokenEndpoint, Uri revocationEndpoint, @required Uri redirectUri, @required String clientId, @required String clientSecret, String login, String scope, List<String> scopes, bool useBasicAuth = true, Map<String, String> additionalQueryParams, String idForCache, String storeId, OAuth2ResponseCallback responseCallback}) async {
-
-    if (idForCache != null) {
-      final cachedToken = await AccessTokenStore.fromId(storeId).getSavedToken(id: idForCache);
-      if (cachedToken != null) {
-        return cachedToken;
-      }
-    }
-
-    final state = _cryptRandom(32);
-    final codeVerifier = _cryptRandom(80); // RFC 7636: PKCE extension; at least 43 chars, up to 128 chars.
-
-    final queryParams = Map<String, String>();
-    if (additionalQueryParams != null) {
-      queryParams.addAll(additionalQueryParams);
-    }
-    queryParams.addAll({
-      'response_type': 'code',
-      'client_id': clientId,
-      'redirect_uri': redirectUri.toString(),
-      'state': state,
-      'code_challenge_method': 'S256',
-      'code_challenge': _sha256str(codeVerifier)
-    });
-    if (login != null) {
-      queryParams['login'] = login;
-    }
-    if (scope == null && scopes != null) {
-      scope = (<String>[]..addAll(scopes)..sort((a, b) => a.compareTo(b))).reduce((a, b) => '$a $b');
-    }
-    if (scope != null) {
-      queryParams['scope'] = scope;
-    }
-
-    final authUrl = authorizationEndpoint.replace(queryParameters: queryParams);
-
-    String redUrlStr;
-    if (Platform.isAndroid) {
-      await _methodChannel.invokeMethod('customScheme', redirectUri.scheme);
-      customTab.launch(authUrl.toString(), option: customTab.CustomTabsOption());
-      await Future.delayed(Duration(seconds: 2));
-      final completer = Completer<String>();
-      final sub = _eventStream.listen((data) async {
-        if (data['type'] == 'url') {
-          completer.complete(data['url']?.toString());
+    try {
+      if (idForCache != null) {
+        final cachedToken = await AccessTokenStore.fromId(storeId).getSavedToken(id: idForCache);
+        if (cachedToken != null) {
+          return cachedToken;
         }
+      }
+
+      final state = _cryptRandom(32);
+      final codeVerifier = _cryptRandom(80); // RFC 7636: PKCE extension; at least 43 chars, up to 128 chars.
+
+      final queryParams = Map<String, String>();
+      if (additionalQueryParams != null) {
+        queryParams.addAll(additionalQueryParams);
+      }
+      queryParams.addAll({
+        'response_type': 'code',
+        'client_id': clientId,
+        'redirect_uri': redirectUri.toString(),
+        'state': state,
+        'code_challenge_method': 'S256',
+        'code_challenge': _sha256str(codeVerifier)
       });
-
-      while (true) {
-        await Future.delayed(Duration(milliseconds: 300));
-        final activityCount = await _methodChannel.invokeMethod('activityCount') as int;
-        if (activityCount == 0) {
-          print('FIXME: For SDK version < 23, we could not determine whether Custom Chrome Tab cancellation...');
-          break; // could not monitor CustomTabActivity...
-        } else if (activityCount == 1) {
-          print('Custom Chrome Tab seems to be closed.');
-          if (!completer.isCompleted)
-            completer.complete(null); // canceled
-          break;
-        }
+      if (login != null) {
+        queryParams['login'] = login;
+      }
+      if (scope == null && scopes != null) {
+        scope = (<String>[]..addAll(scopes)..sort((a, b) => a.compareTo(b))).reduce((a, b) => '$a $b');
+      }
+      if (scope != null) {
+        queryParams['scope'] = scope;
       }
 
-      redUrlStr = await completer.future;
-      sub.cancel();
-      // Closing Chrome custom tab that is shown over our Flutter's Activity
-      await _methodChannel.invokeMethod('closeChrome');
-    } else if (Platform.isIOS) {
-      redUrlStr = await _methodChannel.invokeMethod<String>('authSession', {'url': authUrl.toString(), 'customScheme': redirectUri.scheme});
-    } else {
-      throw Exception('Platform not supported.');
-    }
-    if (redUrlStr == null) {
+      final authUrl = authorizationEndpoint.replace(queryParameters: queryParams);
+
+      String redUrlStr;
+      if (Platform.isAndroid) {
+        await _methodChannel.invokeMethod('customScheme', redirectUri.scheme);
+        customTab.launch(authUrl.toString(), option: customTab.CustomTabsOption());
+        await Future.delayed(Duration(seconds: 2));
+        final completer = Completer<String>();
+        final sub = _eventStream.listen((data) async {
+          if (data['type'] == 'url') {
+            completer.complete(data['url']?.toString());
+          }
+        });
+
+        while (true) {
+          await Future.delayed(Duration(milliseconds: 300));
+          final activityCount = await _methodChannel.invokeMethod('activityCount') as int;
+          if (activityCount == 0) {
+            _print('FIXME: For SDK version < 23, we could not determine whether Custom Chrome Tab cancellation...', stackTrace: StackTrace.current);
+            break; // could not monitor CustomTabActivity...
+          } else if (activityCount == 1) {
+            _print('Custom Chrome Tab seems to be closed.');
+            if (!completer.isCompleted)
+              completer.complete(null); // canceled
+            break;
+          }
+        }
+
+        redUrlStr = await completer.future;
+        sub.cancel();
+        // Closing Chrome custom tab that is shown over our Flutter's Activity
+        await _methodChannel.invokeMethod('closeChrome');
+      } else if (Platform.isIOS) {
+        redUrlStr = await _methodChannel.invokeMethod<String>('authSession', {'url': authUrl.toString(), 'customScheme': redirectUri.scheme});
+      } else {
+        throw Exception('Platform not supported.');
+      }
+      if (redUrlStr == null) {
+        return null;
+      }
+
+      final params = Uri.splitQueryString(Uri.parse(redUrlStr).query);
+      if (params['state'] != state) {
+        // state is different; possible authorization code injection attack.
+        throw Exception('state not match; possible authorization code injection.');
+      }
+
+      final token = AccessToken._(useBasicAuth: useBasicAuth, tokenEndpoint: tokenEndpoint, revocationEndpoint: revocationEndpoint, clientId: clientId, clientSecret: clientSecret, responseCallbacks: [responseCallback]);
+      await token._updateToken(query: {'grant_type': 'authorization_code', 'code': params['code'], 'code_verifier': codeVerifier});
+
+      if (idForCache != null) {
+        token.saveToken(id: idForCache, storeId: storeId);
+      }
+
+      return token;
+    } catch (e, s) {
+      _print(e, stackTrace: s);
       return null;
     }
-
-    final params = Uri.splitQueryString(Uri.parse(redUrlStr).query);
-    if (params['state'] != state) {
-      // state is different; possible authorization code injection attack.
-      throw Exception('state not match; possible authorization code injection.');
-    }
-
-    final token = AccessToken._(useBasicAuth: useBasicAuth, tokenEndpoint: tokenEndpoint, revocationEndpoint: revocationEndpoint, clientId: clientId, clientSecret: clientSecret, responseCallbacks: [responseCallback]);
-    if (!await token._updateToken(query: {'grant_type': 'authorization_code', 'code': params['code'], 'code_verifier': codeVerifier})) {
-      return null;
-    }
-
-    if (idForCache != null) {
-      token.saveToken(id: idForCache, storeId: storeId);
-    }
-
-    return token;
   }
 
   /// Refresh access token immediately.
-  Future<bool> refresh({OAuth2ResponseCallback responseCallback}) => _updateToken(query: { 'grant_type': 'refresh_token', 'refresh_token': refreshToken }, responseCallback: responseCallback);
+  Future<void> refresh({OAuth2ResponseCallback responseCallback}) => _updateToken(query: { 'grant_type': 'refresh_token', 'refresh_token': refreshToken }, responseCallback: responseCallback);
 
   /// Refresh access token if needed.
   /// Because [expiry] is calculated on client side after receiving the access token, the access token may be invalidated a little before
   /// it; if [error] is set, the access token is refreshed before the calculated [expiry].
   Future<bool> refreshIfNeeded({Duration error, OAuth2ResponseCallback responseCallback}) async {
     error ??= Duration(seconds: 30);
-    if (expiry.subtract(error).compareTo(DateTime.now()) < 0)
-      return await refresh(responseCallback: responseCallback);
+    if (expiry.subtract(error).compareTo(DateTime.now()) < 0) {
+      await refresh(responseCallback: responseCallback);
+      return true;
+    }
     return false;
   }
 
@@ -219,21 +248,15 @@ class AccessToken {
     }
   }
 
-  Future<bool> _updateToken({Map<String, String> query, OAuth2ResponseCallback responseCallback}) async {
-    try {
-      final res = await _sendRequest(tokenEndpoint, query: query, responseCallback: responseCallback);
-      final error = res['error'];
-      if (error != null) {
-        final errorDesc = res['error_description'];
-        print('_updateToken failed: $error: $errorDesc');
-        return false;
-      }
-      final result = _validateAndSetFields(res);
-      _timeStamp = DateTime.now();
-      return result;
-    } catch (e, s) {
-      print('_updateToken failed: $e\n$s');
+  Future<void> _updateToken({Map<String, String> query, OAuth2ResponseCallback responseCallback}) async {
+    final res = await _sendRequest(tokenEndpoint, query: query, responseCallback: responseCallback);
+    final error = res['error'];
+    if (error != null) {
+      final errorDesc = res['error_description'];
+      throw Exception('_updateToken failed: $error: $errorDesc');
     }
+    _validateAndSetFields(res);
+    _timeStamp = DateTime.now();
   }
 
   Future<dynamic> _sendRequest(Uri endpoint, {Map<String, String> query, OAuth2ResponseCallback responseCallback}) async {
@@ -418,7 +441,7 @@ class OAuth2Config {
 
   /// Start authorization process. It may return cached access token if [uniqueId] is set.
   /// If [reset] is true, authorization clears the cache before authorization and it always do interactive authorization.
-  Future<AccessToken> authorize({bool reset = true}) async {
+  Future<AccessToken> authorize({bool reset = false}) async {
     if (reset) {
       await AccessTokenStore.fromId(storeId).removeSavedTokens(ids: [uniqueId]);
     }

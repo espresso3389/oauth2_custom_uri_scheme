@@ -1,3 +1,12 @@
+## 0.3.3
+
+* `refresh` throws exception if it could not refresh the token.
+* Add `AccessToken.printHandler` static variable to customize debug log verbosity.
+
+## 0.3.2
+
+* `OAuth2Config.authorize`: reset should be false by default.
+
 ## 0.3.1
 
 * Minor updates.

@@ -47,7 +47,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: OAuth2TokenHolder(
           config: oauth2Config,
           builder: (context, accessToken, state, authorize, deauthorize, child) => ListTile(title: RaisedButton(
-            onPressed:() => accessToken == null ? authorize() : deauthorize(),
+            onPressed:() => accessToken == null ? authorize() : deauthroizeConfirm(deauthorize),
             child: state == OAuth2TokenAvailability.Authorizing
             ? const CircularProgressIndicator()
             : Text(accessToken == null ? 'Authorize' : 'Deauthorize'))
@@ -55,5 +55,24 @@ class _MyHomePageState extends State<MyHomePage> {
         )
       )
     );
+  }
+
+  /// NOTE: it's your app's responsibility to interact with the user; the deauthorize function does not interact with him/her.
+  Future<bool> deauthroizeConfirm(void deauthorize()) async {
+    final ret = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Deauthorize App'),
+        content: Text('Do you really want to deauthorize the app?'),
+        actions: <Widget>[
+          FlatButton(child: Text("Cancel"), onPressed: () => Navigator.of(context).pop(false)),
+          FlatButton(child: Text("Deauthorize"), onPressed: () => Navigator.of(context).pop(true))
+        ]
+      )
+    );
+    if (ret) {
+      deauthorize();
+    }
+    return ret;
   }
 }
