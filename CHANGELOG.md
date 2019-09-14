@@ -1,6 +1,6 @@
-## 0.3.4
+## 0.3.5
 
-* Minor fixes.
+* code_challenge is not correctly calculated.
 
 ## 0.3.4
 

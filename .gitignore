@@ -23,3 +23,5 @@ android/.classpath
 example/android/.settings/
 
 example/android/app/.settings/
+
+.idea/

@@ -345,7 +345,7 @@ class AccessToken {
     return sb.toString();
   }
 
-  static String _sha256str(String random) => base64Url.encode(sha256.newInstance().convert(random.codeUnits).bytes);
+  static String _sha256str(String random) => base64Url.encode(sha256.newInstance().convert(random.codeUnits).bytes).replaceAll('=', '');
 }
 
 /// Cache for [AccessToken] instances.
