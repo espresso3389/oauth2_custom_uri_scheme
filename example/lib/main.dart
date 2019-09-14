@@ -25,7 +25,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 final oauth2Config = OAuth2Config(
-  uniqueId: 'example.com#1', // NOTE: ID to identify the credential for box session
+  uniqueId: 'example.com#1', // NOTE: ID to identify the credential save
   authorizationEndpoint: Uri.parse('https://example.com/authorize'),
   tokenEndpoint: Uri.parse('https://example.com/token'),
   // revocationEndpoint is optional

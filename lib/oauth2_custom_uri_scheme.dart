@@ -206,7 +206,7 @@ class AccessToken {
       }
 
       final token = AccessToken._(useBasicAuth: useBasicAuth, tokenEndpoint: tokenEndpoint, revocationEndpoint: revocationEndpoint, clientId: clientId, clientSecret: clientSecret, responseCallbacks: [responseCallback]);
-      await token._updateToken(query: {'grant_type': 'authorization_code', 'code': params['code'], 'code_verifier': codeVerifier});
+      await token._updateToken(query: {'grant_type': 'authorization_code', 'code': params['code'], 'code_verifier': codeVerifier, 'redirect_uri': redirectUri.toString()});
 
       if (idForCache != null) {
         token.saveToken(id: idForCache, storeId: storeId);

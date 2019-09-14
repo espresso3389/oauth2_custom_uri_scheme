@@ -1,3 +1,7 @@
+## 0.3.6
+
+* token endpoint also needs redirect_uri.
+
 ## 0.3.5
 
 * code_challenge is not correctly calculated.
