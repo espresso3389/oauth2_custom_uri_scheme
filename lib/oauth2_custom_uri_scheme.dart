@@ -5,12 +5,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart';
 import 'package:crypto/crypto.dart';
-import 'package:flutter_custom_tabs/flutter_custom_tabs.dart' as customTab;
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 /// [uri] is the URI of request invocation.
 /// [query] is the actual query passed to the URI.
@@ -163,8 +164,7 @@ class AccessToken {
       String redUrlStr;
       if (Platform.isAndroid) {
         await _methodChannel.invokeMethod('customScheme', redirectUri.scheme);
-        customTab.launch(authUrl.toString(), option: customTab.CustomTabsOption());
-        await Future.delayed(Duration(seconds: 2));
+
         final completer = Completer<String>();
         final sub = _eventStream.listen((data) async {
           if (data['type'] == 'url') {
@@ -172,24 +172,18 @@ class AccessToken {
           }
         });
 
-        while (true) {
-          await Future.delayed(Duration(milliseconds: 300));
-          final activityCount = await _methodChannel.invokeMethod('activityCount') as int;
-          if (activityCount == 0) {
-            _print('FIXME: For SDK version < 23, we could not determine whether Custom Chrome Tab cancellation...', stackTrace: StackTrace.current);
-            break; // could not monitor CustomTabActivity...
-          } else if (activityCount == 1) {
-            _print('Custom Chrome Tab seems to be closed.');
-            if (!completer.isCompleted)
+        final browser = EmbeddedChromeBrowser(onClose: () {
+          if (!completer.isCompleted)
               completer.complete(null); // canceled
-            break;
-          }
-        }
+        });
+        browser.open(url: authUrl.toString(),
+          options: ChromeSafariBrowserClassOptions(
+            androidChromeCustomTabsOptions: AndroidChromeCustomTabsOptions(addShareButton: false)
+          )
+        );
 
         redUrlStr = await completer.future;
         sub.cancel();
-        // Closing Chrome custom tab that is shown over our Flutter's Activity
-        await _methodChannel.invokeMethod('closeChrome');
       } else if (Platform.isIOS) {
         redUrlStr = await _methodChannel.invokeMethod<String>('authSession', {'url': authUrl.toString(), 'customScheme': redirectUri.scheme});
       } else {
@@ -465,4 +459,14 @@ class OAuth2Config {
 
   /// Delete cached token.
   Future<void> reset() => AccessTokenStore.fromId(storeId).removeSavedTokens(ids: [uniqueId]);
+}
+
+class EmbeddedChromeBrowser extends ChromeSafariBrowser {
+
+  final Function onClose;
+
+  EmbeddedChromeBrowser({this.onClose});
+
+  @override
+  void onClosed() => onClose?.call();
 }

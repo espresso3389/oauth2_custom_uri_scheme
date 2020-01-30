@@ -49,20 +49,6 @@ class Oauth2CustomUriSchemePlugin(registrar: Registrar): MethodCallHandler {
     if (call.method == "customScheme") {
       customScheme = call.arguments as String?
       result.success(null)
-    } else if (call.method == "closeChrome") {
-      val myIntent = Intent(registrar.activity(), registrar.activity().javaClass)
-      myIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-      myIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-      registrar.view().context.startActivity(myIntent)
-      result.success(null)
-    } else if (call.method == "activityCount") {
-      val activityManager = registrar.context().getSystemService(ACTIVITY_SERVICE) as ActivityManager
-      if (Build.VERSION.SDK_INT >= 23) {
-        val className = activityManager.appTasks.get(0).taskInfo.topActivity.className
-        result.success(if (className.indexOf("CustomTab") >= 0) 2 else 1)
-      } else {
-        result.success(0)
-      }
     } else {
         result.notImplemented()
     }
