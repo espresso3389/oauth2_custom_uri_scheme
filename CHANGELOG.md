@@ -1,6 +1,7 @@
-## 0.3.8
+## 0.3.9
 
 * FIXED: #4, #5: Now uses flutter_inappwebview rather than flutter_custom_tabs to control tab closing timing.
+* Document updates.
 
 ## 0.3.7
 

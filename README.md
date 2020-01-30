@@ -5,8 +5,6 @@ An implementation of OAuth 2.0 Authorization Code Grant with redirection to appl
 To make the implementation safer (but not perfect), it implements the following features:
 
 - [Custom Chrome Tabs](https://developer.chrome.com/multidevice/android/customtabs) (Android)
-  - Automatic Chrome Tab close feature on authorization finish
-  - Chrome Tab cancellation detection (API Level >= 23)
 - [ASWebAuthenticationSession](https://developer.apple.com/documentation/authenticationservices/aswebauthenticationsession) (iOS 12)
 - [SFAuthenticationSession](https://developer.apple.com/documentation/safariservices/sfauthenticationsession) (iOS 11)
 - [Proof Key for Code Exchange (PKCE) by OAuth Public Clients](https://tools.ietf.org/html/rfc7636)
