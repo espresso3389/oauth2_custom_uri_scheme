@@ -50,7 +50,7 @@ class Oauth2CustomUriSchemePlugin(registrar: Registrar): MethodCallHandler {
       customScheme = call.arguments as String?
       result.success(null)
     } else if (call.method == "closeChrome") {
-      val myIntent = Intent(registrar.view().context, registrar.activity().javaClass)
+      val myIntent = Intent(registrar.activity(), registrar.activity().javaClass)
       myIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
       myIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
       registrar.view().context.startActivity(myIntent)
