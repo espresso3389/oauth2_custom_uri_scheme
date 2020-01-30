@@ -26,14 +26,15 @@ class MyHomePage extends StatefulWidget {
 
 final oauth2Config = OAuth2Config(
   uniqueId: 'example.com#1', // NOTE: ID to identify the credential save
-  authorizationEndpoint: Uri.parse('https://example.com/authorize'),
-  tokenEndpoint: Uri.parse('https://example.com/token'),
+  authorizationEndpoint: Uri.parse('https://login.microsoftonline.com/common/oauth2/v2.0/authorize'),
+tokenEndpoint: Uri.parse('https://login.microsoftonline.com/common/oauth2/v2.0/token'),
   // revocationEndpoint is optional
   revocationEndpoint: Uri.parse('https://example.com/revoke'),
   // NOTE: For Android, we also have corresponding intent-filter entry on example/android/app/src/main/AndroidManifest.xml
   redirectUri: Uri.parse('com.example.redirect43763246328://callback'),
   clientId: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
   clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+  scope: 'user.read',
   useBasicAuth: false);
 
 class _MyHomePageState extends State<MyHomePage> {
@@ -41,7 +42,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Simple OAuth Sample'),
+        title: Text('Simple Azure AD OAuth2.0 Example'),
       ),
       body: Center(
         child: OAuth2TokenHolder(
