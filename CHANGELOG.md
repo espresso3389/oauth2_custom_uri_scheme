@@ -1,3 +1,8 @@
+## 0.3.7
+
+* FIXED: #5 Workaround for java.lang.UnsupportedOperationException: The new embedding does not support the old FlutterView. at io.flutter.embedding.engine.plugins.shim.ShimRegistrar.view(ShimRegistrar.java:82)
+* More realistic example for Microsoft Account.
+
 ## 0.3.6
 
 * token endpoint also needs redirect_uri.

@@ -1,6 +1,6 @@
 # [oauth2_custom_uri_scheme](https://pub.dev/packages/oauth2_custom_uri_scheme/)
 
-An implementation of OAuth 2.0 authorization code grant with redirection to application specific custom URI scheme.
+An implementation of OAuth 2.0 Authorization Code Grant with redirection to application specific custom URI scheme.
 
 To make the implementation safer (but not perfect), it implements the following features:
 
@@ -10,15 +10,15 @@ To make the implementation safer (but not perfect), it implements the following 
 - [ASWebAuthenticationSession](https://developer.apple.com/documentation/authenticationservices/aswebauthenticationsession) (iOS 12)
 - [SFAuthenticationSession](https://developer.apple.com/documentation/safariservices/sfauthenticationsession) (iOS 11)
 - [Proof Key for Code Exchange (PKCE) by OAuth Public Clients](https://tools.ietf.org/html/rfc7636)
-  - If PKCE is supported by OAuth service provider, it can prevent access token hijacking
+  - If PKCE is supported by OAuth service provider, it can prevent access-token-hijacking
 
-So the implementation fully works on Android with API level >= 23 and iOS >= 11.0.
+The implementation works well on Android with API level >= 23 and iOS >= 11.0 but it even runs on older API/OS versions.
 
 ## Installation
 
 ```yaml
 dependencies:
-  oauth2_custom_uri_scheme: ^0.3.6
+  oauth2_custom_uri_scheme: ^0.3.7
 ```
 
 ## Getting Started
@@ -42,6 +42,7 @@ final oauth2Config = OAuth2Config(
   redirectUri: Uri.parse('com.example.redirect43763246328://callback'),
   clientId: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
   clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+  // scope: 'profile',
   useBasicAuth: false);
 
 ...

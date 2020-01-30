@@ -429,6 +429,7 @@ class OAuth2Config {
   final String scope;
   /// Scope values. Mutually exclusive with [scope].
   final List<String> scopes;
+  /// Wether the server can accept `Authorizaion: Basic` on HTTP header or not. Certain services does not support it.
   final bool useBasicAuth;
   /// Additional query params that are not directly supported by the plugin.
   final Map<String, String> additionalQueryParams;

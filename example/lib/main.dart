@@ -25,7 +25,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 final oauth2Config = OAuth2Config(
-  uniqueId: 'example.com#1', // NOTE: ID to identify the credential save
+  uniqueId: 'azuread-common', // NOTE: ID to identify the credential save
   authorizationEndpoint: Uri.parse('https://login.microsoftonline.com/common/oauth2/v2.0/authorize'),
 tokenEndpoint: Uri.parse('https://login.microsoftonline.com/common/oauth2/v2.0/token'),
   // revocationEndpoint is optional
