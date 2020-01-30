@@ -25,3 +25,5 @@ example/android/.settings/
 example/android/app/.settings/
 
 .idea/
+
+example/.flutter-plugins-dependencies

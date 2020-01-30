@@ -1,11 +1,11 @@
 name: oauth2_custom_uri_scheme
 description: An implementation of OAuth 2.0 authorization code grant with redirection to application specific custom URL scheme.
 version: 0.3.6
-author: Takashi Kawasaki <espresso3389@gmail.com>
 homepage: https://github.com/espresso3389/oauth2_custom_uri_scheme
 
 environment:
   sdk: ">=2.1.0 <3.0.0"
+  flutter: ^1.10.0
 
 dependencies:
   flutter:
@@ -25,13 +25,13 @@ dev_dependencies:
 
 # The following section is specific to Flutter.
 flutter:
-  # This section identifies this Flutter project as a plugin project.
-  # The androidPackage and pluginClass identifiers should not ordinarily
-  # be modified. They are used by the tooling to maintain consistency when
-  # adding or updating assets for this project.
   plugin:
-    androidPackage: jp.espresso3389.oauth2_custom_uri_scheme
-    pluginClass: Oauth2CustomUriSchemePlugin
+    platform:
+      android:
+        package: jp.espresso3389.oauth2_custom_uri_scheme
+        pluginClass: Oauth2CustomUriSchemePlugin
+      ios:
+        pluginClass: Oauth2CustomUriSchemePlugin
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:
