@@ -121,19 +121,6 @@ We should add `AndroidManifest.xml` to include additional `<intent-filter>` unde
 </intent-filter>
 ```
 
-In `android/app/build.gradle` set `minSdkVersion` to >= 18.
-
-```gradle
-android {
-    ...
-    defaultConfig {
-        ...
-        minSdkVersion 18
-        ...
-    }
-}
-```
-
 ## API reference
 
 [API reference](https://pub.dev/documentation/oauth2_custom_uri_scheme/latest/oauth2_custom_uri_scheme/oauth2_custom_uri_scheme-library.html) on [pub.dev](https://pub.dev).
