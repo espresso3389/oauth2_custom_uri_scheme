@@ -1,3 +1,8 @@
+# CIRITICAL
+Until flutter_inappwebview's next release, I could not release a new version.........
+https://github.com/pichillilorenzo/flutter_inappwebview/issues/220#issuecomment-580783367
+
+
 # [oauth2_custom_uri_scheme](https://pub.dev/packages/oauth2_custom_uri_scheme/)
 
 An implementation of OAuth 2.0 Authorization Code Grant with redirection to application specific custom URI scheme.
