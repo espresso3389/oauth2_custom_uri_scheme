@@ -178,7 +178,7 @@ class AccessToken {
         });
         browser.open(url: authUrl.toString(),
           options: ChromeSafariBrowserClassOptions(
-            androidChromeCustomTabsOptions: AndroidChromeCustomTabsOptions(addShareButton: false)
+            android: AndroidChromeCustomTabsOptions(addShareButton: false)
           )
         );
 
