@@ -27,3 +27,5 @@ example/android/app/.settings/
 .idea/
 
 example/.flutter-plugins-dependencies
+
+.vscode/settings.json

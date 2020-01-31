@@ -1,3 +1,12 @@
+## 0.3.10
+
+**TEMPORARY RELEASE**
+
+Because 0.3.7 - 0.3.9 breaks consistency on certain environment, 0.3.10 is just a copy of 0.3.6 and has known issues #5.
+
+Until flutter_inappwebview's next release, I could not release a new version.........
+https://github.com/pichillilorenzo/flutter_inappwebview/issues/220#issuecomment-580783367
+
 ## 0.3.6
 
 * token endpoint also needs redirect_uri.
