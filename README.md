@@ -1,6 +1,6 @@
-# CIRITICAL
+# IMPORTANT NOTE
 
-There's [a release blocker](https://github.com/pichillilorenzo/flutter_inappwebview/issues/220#issuecomment-580783367) and I just released a release, 0.3.10 which is based on 0.3.6 (the code is not changed) so it's anyway not fixing anything but it just works on certain environments.
+There's [a release blocker](https://github.com/espresso3389/oauth2_custom_uri_scheme/issues/5#issuecomment-580800057) and I just released a release, 0.3.10 which is based on 0.3.6 (the code is not changed) so it's anyway not fixing anything but it just works on certain environments.
 
 So if you want to check the latest version, please use the latest github commit. I think the following commit will work:
 
