@@ -129,7 +129,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.3.10"
+    version: "0.3.11"
   path:
     dependency: transitive
     description:
