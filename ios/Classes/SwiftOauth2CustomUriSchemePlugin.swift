@@ -3,16 +3,17 @@ import UIKit
 import SafariServices
 import AuthenticationServices
 
-public class SwiftOauth2CustomUriSchemePlugin: NSObject, FlutterPlugin {
+public class SwiftOauth2CustomUriSchemePlugin: NSObject, FlutterPlugin, ASWebAuthenticationPresentationContextProviding {
+
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "oauth2_custom_uri_scheme", binaryMessenger: registrar.messenger())
     let instance = SwiftOauth2CustomUriSchemePlugin(registrar)
     registrar.addMethodCallDelegate(instance, channel: channel)
   }
-  
+
   var session: Any? = nil
   let registrar: FlutterPluginRegistrar
-  
+
   init(_ registrar: FlutterPluginRegistrar) {
     self.registrar = registrar
   }
@@ -28,7 +29,7 @@ public class SwiftOauth2CustomUriSchemePlugin: NSObject, FlutterPlugin {
         return
       }
       let urlScheme = args["customScheme"] as? String
-      
+
       if #available(iOS 12.0, *) {
         var authSession: ASWebAuthenticationSession?
         authSession = ASWebAuthenticationSession(url: URL(string: url)!, callbackURLScheme: urlScheme) { url, error in
@@ -37,7 +38,12 @@ public class SwiftOauth2CustomUriSchemePlugin: NSObject, FlutterPlugin {
           self.session = nil
         }
         session = authSession
-        authSession!.start()
+        if #available(iOS 13.0, *) {
+            authSession?.presentationContextProvider = self
+        }
+        if !authSession!.start() {
+          print("ASWebAuthenticationSession.start failed.")
+        }
       } else if #available(iOS 11.0, *) {
         var authSession: SFAuthenticationSession?
         authSession = SFAuthenticationSession(url: URL(string: url)!, callbackURLScheme: urlScheme) { url, error in
@@ -46,11 +52,18 @@ public class SwiftOauth2CustomUriSchemePlugin: NSObject, FlutterPlugin {
           self.session = nil
         }
         session = authSession
-        authSession!.start()
+        if !authSession!.start() {
+          print("SFAuthenticationSession.start failed.")
+        }
       } else {
         result(nil)
         return
       }
     }
+  }
+
+  @available(iOS 12.0, *)
+  public func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+    return UIApplication.shared.delegate!.window!!
   }
 }
