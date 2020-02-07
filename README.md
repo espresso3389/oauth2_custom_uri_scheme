@@ -8,7 +8,6 @@ So if you want to check the latest version, please use the latest github commit.
   oauth2_custom_uri_scheme:
     git:
       url: https://github.com/espresso3389/oauth2_custom_uri_scheme
-      ref: a94d9e76001fb09c4761eda47fd47ecdca9f08e4
 ```
 
 # [oauth2_custom_uri_scheme](https://pub.dev/packages/oauth2_custom_uri_scheme/)
