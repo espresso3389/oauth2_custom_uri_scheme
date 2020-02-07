@@ -1,3 +1,15 @@
+# IMPORTANT NOTE
+
+There's [a release blocker](https://github.com/espresso3389/oauth2_custom_uri_scheme/issues/5#issuecomment-580800057) and I just released a release, 0.3.10 which is based on 0.3.6 (the code is not changed) so it's anyway not fixing anything but it just works on certain environments.
+
+So if you want to check the latest version, please use the latest github commit. I think the following commit will work:
+
+```yaml
+  oauth2_custom_uri_scheme:
+    git:
+      url: https://github.com/espresso3389/oauth2_custom_uri_scheme
+```
+
 # [oauth2_custom_uri_scheme](https://pub.dev/packages/oauth2_custom_uri_scheme/)
 
 An implementation of OAuth 2.0 Authorization Code Grant with redirection to application specific custom URI scheme.
@@ -16,7 +28,7 @@ The implementation works well on Android with API level >= 23 and iOS >= 11.0 bu
 
 ```yaml
 dependencies:
-  oauth2_custom_uri_scheme: ^0.3.9
+  oauth2_custom_uri_scheme: ^0.3.10
 ```
 
 ## Getting Started

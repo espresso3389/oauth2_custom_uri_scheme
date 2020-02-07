@@ -1,6 +1,6 @@
 name: oauth2_custom_uri_scheme
 description: An implementation of OAuth 2.0 authorization code grant with redirection to application specific custom URL scheme.
-version: 0.3.9
+version: 0.3.10
 homepage: https://github.com/espresso3389/oauth2_custom_uri_scheme
 
 environment:
@@ -10,14 +10,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  crypto:
+  crypto: ^2.1.3
   #flutter_inappwebview: ^2.1.0+1
   flutter_inappwebview:
     git:
       url: https://github.com/pichillilorenzo/flutter_inappwebview.git
       ref: master
   http: ^0.12.0+2
-  rxdart: ^0.23.1
+  rxdart: ^0.22.0
   flutter_secure_storage: ^3.3.1+1
 
 dev_dependencies:
