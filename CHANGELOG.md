@@ -1,6 +1,10 @@
+## 0.3.12
+
+* Just a documentation update.
+
 ## 0.3.11
 
-- ASWebAuthenticationSession.start sliently fails on iOS13 due to breaking changes.
+* ASWebAuthenticationSession.start sliently fails on iOS13 due to breaking changes.
 
 ## 0.3.10
 
