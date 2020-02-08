@@ -12,6 +12,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:reader_writer_lock/reader_writer_lock.dart';
 
 /// [uri] is the URI of request invocation.
 /// [query] is the actual query passed to the URI.
@@ -49,6 +50,8 @@ class AccessToken {
 
   /// By default, the [object] is forwareded to [core.print]. But you can change the behavior by settings [printHandler].
   void print(Object object, {StackTrace stackTrace}) => _print(object, accessToken: this, stackTrace: stackTrace);
+
+  final rwlock = ReaderWriterLock();
 
   /// Token endpoint URL.
   final Uri tokenEndpoint;
@@ -243,14 +246,17 @@ class AccessToken {
   }
 
   Future<void> _updateToken({Map<String, String> query, OAuth2ResponseCallback responseCallback}) async {
-    final res = await _sendRequest(tokenEndpoint, query: query, responseCallback: responseCallback);
-    final error = res['error'];
-    if (error != null) {
-      final errorDesc = res['error_description'];
-      throw Exception('_updateToken failed: $error: $errorDesc');
-    }
-    _validateAndSetFields(res);
-    _timeStamp = DateTime.now();
+
+    await rwlock.writerLock(() async {
+      final res = await _sendRequest(tokenEndpoint, query: query, responseCallback: responseCallback);
+      final error = res['error'];
+      if (error != null) {
+        final errorDesc = res['error_description'];
+        throw Exception('_updateToken failed: $error: $errorDesc');
+      }
+      _validateAndSetFields(res);
+      _timeStamp = DateTime.now();
+    });
   }
 
   Future<dynamic> _sendRequest(Uri endpoint, {Map<String, String> query, OAuth2ResponseCallback responseCallback}) async {
@@ -285,6 +291,9 @@ class AccessToken {
 
   /// Create a new HTTP request with bearer token. The function may refresh the token if needed.
   /// [method] is either `GET`, `POST`, `PUT`, or ...
+  /// NOTE: You may encounter race-condition with background token refresh behavior. In that case,
+  /// you can protect your sending request by calling [ReaderWriterLock.readerLock] with [rwlock].
+  /// Or, you had better use nitfy HTTP wrapper function on the class.
   Future<Request> createRequest(String method, Uri uri, {Map<String, dynamic> json}) async {
     await refreshIfNeeded();
     final req = Request(method, uri);
@@ -298,12 +307,14 @@ class AccessToken {
 
   /// Send a HTTP request with JSON and obtain [ByteStream].
   Future<ByteStream> requestByteStreamWithJson({@required String method, @required Uri uri, @required Map<String, dynamic> json, bool neverThrowOnNon2XX}) async {
-    final req = await createRequest(method, uri, json: json);
-    final res = await req.send();
-    if (res.statusCode ~/ 100 != 2 && neverThrowOnNon2XX != true) {
-      throw Exception('HTTP request failed (${res.statusCode}): $method $uri');
-    }
-    return res.stream;
+    return await rwlock.readerLock(() async {
+      final req = await createRequest(method, uri, json: json);
+      final res = await req.send();
+      if (res.statusCode ~/ 100 != 2 && neverThrowOnNon2XX != true) {
+        throw Exception('HTTP request failed (${res.statusCode}): $method $uri');
+      }
+      return res.stream;
+    });
   }
 
   /// Send a HTTP request with JSON and obtain [String].
@@ -314,12 +325,14 @@ class AccessToken {
 
   /// Fetch (`GET`) the specified URL.
   Future<ByteStream> getByteStreamFromUri(Uri uri, {bool neverThrowOnNon2XX}) async {
-    final req = await createRequest('GET', uri);
-    final res = await req.send();
-    if (res.statusCode ~/ 100 != 2 && neverThrowOnNon2XX != true) {
-      throw Exception('HTTP request failed (${res.statusCode}): GET $uri');
-    }
-    return res.stream;
+    return await rwlock.readerLock(() async {
+      final req = await createRequest('GET', uri);
+      final res = await req.send();
+      if (res.statusCode ~/ 100 != 2 && neverThrowOnNon2XX != true) {
+        throw Exception('HTTP request failed (${res.statusCode}): GET $uri');
+      }
+      return res.stream;
+    });
   }
 
   /// Fetch (`GET`) the specified URL.

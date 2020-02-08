@@ -146,13 +146,20 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.9.6+3"
+  mutex:
+    dependency: transitive
+    description:
+      name: mutex
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.3"
   oauth2_custom_uri_scheme:
     dependency: "direct dev"
     description:
       path: ".."
       relative: true
     source: path
-    version: "0.3.12"
+    version: "0.4.1"
   path:
     dependency: transitive
     description:
@@ -181,6 +188,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.0.5"
+  reader_writer_lock:
+    dependency: transitive
+    description:
+      name: reader_writer_lock
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.1.0"
   rxdart:
     dependency: transitive
     description:
