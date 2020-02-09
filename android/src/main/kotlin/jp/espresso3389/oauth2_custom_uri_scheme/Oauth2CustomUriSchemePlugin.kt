@@ -1,26 +1,28 @@
 package jp.espresso3389.oauth2_custom_uri_scheme
 
-import androidx.annotation.NonNull;
+import android.content.Context
+import android.content.Intent
+
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import io.flutter.plugin.common.BinaryMessenger
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry.Registrar
+import io.flutter.plugin.common.PluginRegistry.NewIntentListener
 
 /** Oauth2CustomUriSchemePlugin */
-public class Oauth2CustomUriSchemePlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry.NewIntentListener {
+public class Oauth2CustomUriSchemePlugin: FlutterPlugin, MethodCallHandler, ActivityAware, NewIntentListener {
   private var methodChannel: MethodChannel? = null
   private var eventChannel: EventChannel? = null
   private var activityPluginBinding: ActivityPluginBinding?= null
 
   private var eventSink: EventChannel.EventSink? = null
   private var customScheme: String? = null
-
-  override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-    channel = MethodChannel(flutterPluginBinding.getFlutterEngine().getDartExecutor(), "oauth2_custom_uri_scheme")
-    channel.setMethodCallHandler(this);
-  }
 
   // This static function is optional and equivalent to onAttachedToEngine. It supports the old
   // pre-Flutter-1.12 Android projects. You are encouraged to continue supporting
@@ -104,7 +106,7 @@ public class Oauth2CustomUriSchemePlugin: FlutterPlugin, MethodCallHandler, Acti
       customScheme = call.arguments as String?
       result.success(null)
     } else {
-        result.notImplemented()
+      result.notImplemented()
     }
   }
 
