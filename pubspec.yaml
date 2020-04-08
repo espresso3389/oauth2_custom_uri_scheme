@@ -1,6 +1,6 @@
 name: oauth2_custom_uri_scheme
 description: An implementation of OAuth 2.0 authorization code grant with redirection to application specific custom URL scheme.
-version: 0.4.1
+version: 0.4.2
 homepage: https://github.com/espresso3389/oauth2_custom_uri_scheme
 
 environment:

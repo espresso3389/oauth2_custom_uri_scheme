@@ -1,3 +1,8 @@
+## 0.4.2
+
+* Improve error handling.
+* Add AccessToken.authorizationType to use custom Authorization header with certain services.
+
 ## 0.4.1
 
 * Protect against race-conditions on token refresh.
