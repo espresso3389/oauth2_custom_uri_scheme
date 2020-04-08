@@ -61,6 +61,7 @@ class AccessToken {
   final bool useBasicAuth;
   final String _clientId;
   final String _clientSecret;
+  final String _authorizationType;
   DateTime _timeStamp;
   Map<String, dynamic> _fields;
 
@@ -80,6 +81,8 @@ class AccessToken {
   Map<String, dynamic> get fields => _fields;
   /// When the access token is obtained.
   DateTime get timeStamp => _timeStamp;
+  /// Authorization header type. Typically `Bearer`.
+  String get authorizationType => authorizationType ?? 'Bearer';
 
   void _validateAndSetFields(Map<String, dynamic> fields) {
     if (fields['access_token'] is String && fields['token_type'] is String && fields['expires_in'] is int) {
@@ -90,9 +93,10 @@ class AccessToken {
     }
   }
 
-  AccessToken._({@required this.tokenEndpoint, @required this.useBasicAuth, @required String clientId, @required String clientSecret, this.revocationEndpoint, DateTime timeStamp, Map<String, dynamic> fields, List<OAuth2ResponseCallback> responseCallbacks}):
+  AccessToken._({@required this.tokenEndpoint, @required this.useBasicAuth, @required String clientId, @required String clientSecret, this.revocationEndpoint, String authorizationType, DateTime timeStamp, Map<String, dynamic> fields, List<OAuth2ResponseCallback> responseCallbacks}):
     this._clientId = clientId,
     this._clientSecret = clientSecret,
+    this._authorizationType = authorizationType,
     this._timeStamp = timeStamp ?? DateTime.now(),
     this._fields = Map<String, dynamic>.unmodifiable(fields ?? {}),
     this.responseCallbacks = responseCallbacks ?? List<OAuth2ResponseCallback>();
@@ -103,8 +107,9 @@ class AccessToken {
       'useBasicAuth': useBasicAuth,
       'clientId': _clientId,
       'clientSecret': _clientSecret,
+      'authorizationType': _authorizationType,
       'timeStamp': _timeStamp.millisecondsSinceEpoch,
-      'fields': _fields
+      'fields': _fields,
     });
 
   /// Deserialize [AccessToken] from [jsonStr]. If [jsonStr] is null, the function returns null.
@@ -119,6 +124,7 @@ class AccessToken {
       useBasicAuth: json['useBasicAuth'],
       clientId: json['clientId'],
       clientSecret: json['clientSecret'],
+      authorizationType: json['authorizationType'],
       timeStamp: DateTime.fromMillisecondsSinceEpoch(json['timeStamp'] as int),
       fields: json['fields']
     );
@@ -128,7 +134,7 @@ class AccessToken {
 
   /// Authorize the user and return an [AccessToken] or null.
   /// If [idForCache] is specified, the token may be restored from cache and if a token is newly obtained, the token will be saved on the cache. See [AcecssTokenStore] for more.
-  static Future<AccessToken> authorize({@required Uri authorizationEndpoint, @required Uri tokenEndpoint, Uri revocationEndpoint, @required Uri redirectUri, @required String clientId, @required String clientSecret, String login, String scope, List<String> scopes, bool useBasicAuth = true, Map<String, String> additionalQueryParams, String idForCache, String storeId, OAuth2ResponseCallback responseCallback}) async {
+  static Future<AccessToken> authorize({@required Uri authorizationEndpoint, @required Uri tokenEndpoint, Uri revocationEndpoint, String authorizationType, @required Uri redirectUri, @required String clientId, @required String clientSecret, String login, String scope, List<String> scopes, bool useBasicAuth = true, Map<String, String> additionalQueryParams, String idForCache, String storeId, OAuth2ResponseCallback responseCallback}) async {
     try {
       if (idForCache != null) {
         final cachedToken = await AccessTokenStore.fromId(storeId).getSavedToken(id: idForCache);
@@ -197,13 +203,23 @@ class AccessToken {
       }
 
       final params = Uri.splitQueryString(Uri.parse(redUrlStr).query);
+      final error = params['error'];
+      if (error != null) {
+         throw Exception('Error reported on redirected URI: $error');
+      }
+
       if (params['state'] != state) {
         // state is different; possible authorization code injection attack.
         throw Exception('state not match; possible authorization code injection.');
       }
 
-      final token = AccessToken._(useBasicAuth: useBasicAuth, tokenEndpoint: tokenEndpoint, revocationEndpoint: revocationEndpoint, clientId: clientId, clientSecret: clientSecret, responseCallbacks: [responseCallback]);
-      await token._updateToken(query: {'grant_type': 'authorization_code', 'code': params['code'], 'code_verifier': codeVerifier, 'redirect_uri': redirectUri.toString()});
+      final token = AccessToken._(useBasicAuth: useBasicAuth, tokenEndpoint: tokenEndpoint, revocationEndpoint: revocationEndpoint, clientId: clientId, clientSecret: clientSecret, authorizationType: authorizationType, responseCallbacks: [responseCallback]);
+      final query = {'grant_type': 'authorization_code', 'code_verifier': codeVerifier, 'redirect_uri': redirectUri.toString()};
+      final code = params['code'];
+      if (code != null) {
+        query['code'] = code;
+      }
+      await token._updateToken(query: query);
 
       if (idForCache != null) {
         token.saveToken(id: idForCache, storeId: storeId);
@@ -251,7 +267,7 @@ class AccessToken {
       final res = await _sendRequest(tokenEndpoint, query: query, responseCallback: responseCallback);
       final error = res['error'];
       if (error != null) {
-        final errorDesc = res['error_description'];
+        final errorDesc = res['error_description'] ?? 'No error description';
         throw Exception('_updateToken failed: $error: $errorDesc');
       }
       _validateAndSetFields(res);
@@ -297,7 +313,7 @@ class AccessToken {
   Future<Request> createRequest(String method, Uri uri, {Map<String, dynamic> json}) async {
     await refreshIfNeeded();
     final req = Request(method, uri);
-    req.headers['Authorization'] = 'Bearer $accessToken';
+    req.headers['Authorization'] = '$authorizationType $accessToken';
     if (json != null) {
       req.headers['Content-Type'] = 'application/json; charset=utf-8';
       req.body = jsonEncode(json);
@@ -431,6 +447,8 @@ class OAuth2Config {
   /// **Certain reverse engineering tools can extract plain strings in the app code and your secret may be obtained by others.**
   /// And therefore apps installed on client devices are called "public" clients. See [RFC 6749 2.1. Client Types](https://tools.ietf.org/html/rfc6749#section-2.1) for more info.
   final String clientSecret;
+  /// Set token type on `Authorization` header. null to use `Bearer`.
+  final String authorizationType;
   final String login;
   /// Space delimited scope values. Mutually exclusive with [scopes].
   final String scope;
@@ -443,7 +461,7 @@ class OAuth2Config {
   final String storeId;
   final OAuth2ResponseCallback responseCallback;
 
-  OAuth2Config({@required this.uniqueId, @required this.authorizationEndpoint, @required this.tokenEndpoint, this.revocationEndpoint, @required this.redirectUri, @required this.clientId, @required this.clientSecret, this.login, this.scope, this.scopes, this.useBasicAuth = true, this.additionalQueryParams, this.storeId, this.responseCallback});
+  OAuth2Config({@required this.uniqueId, @required this.authorizationEndpoint, @required this.tokenEndpoint, this.revocationEndpoint, @required this.redirectUri, @required this.clientId, @required this.clientSecret, this.authorizationType, this.login, this.scope, this.scopes, this.useBasicAuth = true, this.additionalQueryParams, this.storeId, this.responseCallback});
 
   Future<AccessToken> getAccessTokenFromCache() => AccessTokenStore.fromId(storeId).getSavedToken(id: uniqueId);
 
@@ -460,6 +478,7 @@ class OAuth2Config {
       redirectUri: redirectUri,
       clientId: clientId,
       clientSecret: clientSecret,
+      authorizationType: authorizationType,
       login: login,
       scope: scope,
       scopes: scopes,
