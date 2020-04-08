@@ -241,6 +241,9 @@ class AccessToken {
   Future<bool> refreshIfNeeded({Duration error, OAuth2ResponseCallback responseCallback}) async {
     error ??= Duration(seconds: 30);
     if (expiry.subtract(error).compareTo(DateTime.now()) < 0) {
+      if (refreshToken == null) {
+        throw Exception('No refresh_token. need to re-authorize.');
+      }
       await refresh(responseCallback: responseCallback);
       return true;
     }
@@ -251,9 +254,11 @@ class AccessToken {
     if (revocationEndpoint == null) {
       return null;
     }
-    final err1 = await _sendRequest(revocationEndpoint, query: {'token': refreshToken, 'token_type_hint': 'refresh_token'}, responseCallback: responseCallback);
-    if (err1 is Map<String, dynamic> && err1['error'] != null) {
-      return err1;
+    if (refreshToken != null) {
+      final err1 = await _sendRequest(revocationEndpoint, query: {'token': refreshToken, 'token_type_hint': 'refresh_token'}, responseCallback: responseCallback);
+      if (err1 is Map<String, dynamic> && err1['error'] != null) {
+        return err1;
+      }
     }
     final err2 = await _sendRequest(revocationEndpoint, query: {'token': accessToken, 'token_type_hint': 'access_token'}, responseCallback: responseCallback);
     if (err2 is Map<String, dynamic> && err2['error'] != null) {
