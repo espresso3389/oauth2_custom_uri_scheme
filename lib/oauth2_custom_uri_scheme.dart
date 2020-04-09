@@ -72,9 +72,9 @@ class AccessToken {
   /// `token_type`; token type. Normally, it is `bearer`.
   String get tokenType => _fields['token_type'] as String;
   /// `expires_in`; the token's life time in seconds.
-  int get expiresIn => _fields['expires_in'] as int;
+  Duration get expiresIn => Duration(seconds: _fields['expires_in'] as int);
   /// The expiry calculated based on [timeStamp] and [expiresIn].
-  DateTime get expiry => _timeStamp.add(Duration(seconds: expiresIn));
+  DateTime get expiry => _timeStamp.add(expiresIn);
   /// `refresh_token`; the refresh token.
   String get refreshToken => _fields['refresh_token'] as String;
   /// Raw fields returned by the server (Unmodifiable).
@@ -238,9 +238,8 @@ class AccessToken {
   /// Refresh access token if needed.
   /// Because [expiry] is calculated on client side after receiving the access token, the access token may be invalidated a little before
   /// it; if [error] is set, the access token is refreshed before the calculated [expiry].
-  Future<bool> refreshIfNeeded({Duration error, OAuth2ResponseCallback responseCallback}) async {
-    error ??= Duration(seconds: 30);
-    if (expiry.subtract(error).compareTo(DateTime.now()) < 0) {
+  Future<bool> refreshIfNeeded({Duration graceTime, OAuth2ResponseCallback responseCallback}) async {
+    if (isAboutToExpire(graceTime: graceTime)) {
       if (refreshToken == null) {
         throw Exception('No refresh_token. need to re-authorize.');
       }
@@ -248,6 +247,11 @@ class AccessToken {
       return true;
     }
     return false;
+  }
+
+  bool isAboutToExpire({Duration graceTime}) {
+    graceTime ??= Duration(seconds: expiresIn.inSeconds ~/ 15); // 4 min. for 60 min. expiry
+    return expiry.subtract(graceTime).compareTo(DateTime.now()) < 0;
   }
 
   Future<dynamic> revoke({OAuth2ResponseCallback responseCallback}) async {

@@ -91,7 +91,7 @@ packages:
       name: flutter_secure_storage
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "3.3.1+1"
+    version: "3.3.2"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -146,13 +146,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.9.6+3"
-  mutex:
-    dependency: transitive
-    description:
-      name: mutex
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "1.0.3"
   oauth2_custom_uri_scheme:
     dependency: "direct dev"
     description:
@@ -180,7 +173,7 @@ packages:
       name: petitparser
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.4.0"
+    version: "3.0.2"
   quiver:
     dependency: transitive
     description:
@@ -194,7 +187,7 @@ packages:
       name: reader_writer_lock
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.1.0"
+    version: "0.2.1"
   rxdart:
     dependency: transitive
     description:
@@ -276,7 +269,7 @@ packages:
       name: xml
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "3.6.1"
+    version: "3.7.0"
 sdks:
-  dart: ">=2.6.0 <3.0.0"
+  dart: ">=2.7.0 <3.0.0"
   flutter: ">=1.10.0 <2.0.0"
