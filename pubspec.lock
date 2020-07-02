@@ -56,7 +56,7 @@ packages:
       name: crypto
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.1.4"
+    version: "2.1.5"
   fake_async:
     dependency: transitive
     description:
@@ -94,7 +94,7 @@ packages:
       name: http
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.12.0+4"
+    version: "0.12.1"
   http_parser:
     dependency: transitive
     description:
@@ -150,7 +150,7 @@ packages:
       name: rxdart
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.23.1"
+    version: "0.24.1"
   sky_engine:
     dependency: transitive
     description: flutter
