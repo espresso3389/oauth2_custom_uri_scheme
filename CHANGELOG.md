@@ -1,3 +1,7 @@
+## 0.4.3
+
+* Fixes "Getting error after authorization- Failed to handle method call" (#5) completely using flutter_inappwebview 4.0.0.
+
 ## 0.4.2
 
 * Improve error handling.
