@@ -1,3 +1,7 @@
+## 0.4.5
+
+* Fixes stack overflow on accessing AccessToken.authorizationType.
+
 ## 0.4.4
 
 * Update dependency packages.

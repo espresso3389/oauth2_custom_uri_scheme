@@ -96,7 +96,7 @@ class AccessToken {
   DateTime get timeStamp => _timeStamp;
 
   /// Authorization header type. Typically `Bearer`.
-  String get authorizationType => authorizationType ?? 'Bearer';
+  String get authorizationType => _authorizationType ?? 'Bearer';
 
   void _validateAndSetFields(Map<String, dynamic> fields) {
     if (fields['access_token'] is String &&
