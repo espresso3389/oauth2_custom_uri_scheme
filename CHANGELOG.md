@@ -1,4 +1,4 @@
-## 0.4.6
+## 0.4.6/0.4.7
 
 * AccessToken.authorize introduces usePkce (the default is true) parameter to support certain IdP that does not support PKCE but return errors on PKCE related fields.
 

@@ -600,6 +600,10 @@ class OAuth2Config {
   /// Wether the server can accept `Authorizaion: Basic` on HTTP header or not. Certain services does not support it.
   final bool useBasicAuth;
 
+  /// Normally, leave it true (the default value). PKCE parameters are not harmeful to IdPs that does not support PKCE.
+  /// But certain IdP implementation explicitly check parameters and return errors if PKCE parameters are set.
+  final bool usePkce;
+
   /// Additional query params that are not directly supported by the plugin.
   final Map<String, String> additionalQueryParams;
   final String storeId;
@@ -618,6 +622,7 @@ class OAuth2Config {
       this.scope,
       this.scopes,
       this.useBasicAuth = true,
+      this.usePkce = true,
       this.additionalQueryParams,
       this.storeId,
       this.responseCallback});
@@ -643,6 +648,7 @@ class OAuth2Config {
         scope: scope,
         scopes: scopes,
         useBasicAuth: useBasicAuth,
+        usePkce: usePkce,
         additionalQueryParams: additionalQueryParams,
         idForCache: uniqueId,
         storeId: storeId,
