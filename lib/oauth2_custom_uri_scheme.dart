@@ -174,6 +174,7 @@ class AccessToken {
       String scope,
       List<String> scopes,
       bool useBasicAuth = true,
+      bool usePkce = true,
       Map<String, String> additionalQueryParams,
       String idForCache,
       String storeId,
@@ -199,10 +200,15 @@ class AccessToken {
         'response_type': 'code',
         'client_id': clientId,
         'redirect_uri': redirectUri.toString(),
-        'state': state,
-        'code_challenge_method': 'S256',
-        'code_challenge': _sha256str(codeVerifier)
+        'state': state
       });
+      // Normally, PKCE related parameters are not harmful with IdPs without PKCE support but certain implementations are not :(
+      if (usePkce) {
+        queryParams.addAll({
+          'code_challenge_method': 'S256',
+          'code_challenge': _sha256str(codeVerifier)
+        });
+      }
       if (login != null) {
         queryParams['login'] = login;
       }
@@ -273,9 +279,11 @@ class AccessToken {
           responseCallbacks: [responseCallback]);
       final query = {
         'grant_type': 'authorization_code',
-        'code_verifier': codeVerifier,
         'redirect_uri': redirectUri.toString()
       };
+      if (usePkce) {
+        query['code_verifier'] = codeVerifier;
+      }
       final code = params['code'];
       if (code != null) {
         query['code'] = code;

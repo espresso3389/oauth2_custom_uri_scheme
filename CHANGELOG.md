@@ -1,3 +1,7 @@
+## 0.4.6
+
+* AccessToken.authorize introduces usePkce (the default is true) parameter to support certain IdP that does not support PKCE but return errors on PKCE related fields.
+
 ## 0.4.5
 
 * Fixes stack overflow on accessing AccessToken.authorizationType.
