@@ -33,7 +33,7 @@ import 'package:oauth2_custom_uri_scheme/oauth2_token_holder.dart';
 // OAuth2Config can be app global to keep the OAuth configuration
 //
 final oauth2Config = OAuth2Config(
-  uniqueId: 'example.com#1', // NOTE: ID to identify the credential for box session
+  uniqueId: 'example.com#1', // NOTE: ID to identify the OAuth2 config.
   authorizationEndpoint: Uri.parse('https://example.com/authorize'),
   tokenEndpoint: Uri.parse('https://example.com/token'),
   // revocationEndpoint is optional
