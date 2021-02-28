@@ -25,52 +25,47 @@ class MyHomePage extends StatefulWidget {
 }
 
 final oauth2Config = OAuth2Config(
-  uniqueId: 'azuread-common', // NOTE: ID to identify the credential save
-  authorizationEndpoint: Uri.parse('https://login.microsoftonline.com/common/oauth2/v2.0/authorize'),
-tokenEndpoint: Uri.parse('https://login.microsoftonline.com/common/oauth2/v2.0/token'),
-  // revocationEndpoint is optional
-  revocationEndpoint: Uri.parse('https://example.com/revoke'),
-  // NOTE: For Android, we also have corresponding intent-filter entry on example/android/app/src/main/AndroidManifest.xml
-  redirectUri: Uri.parse('com.example.redirect43763246328://callback'),
-  clientId: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-  clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
-  scope: 'user.read',
-  useBasicAuth: false);
+    uniqueId: 'azuread-common', // NOTE: ID to identify the credential save
+    authorizationEndpoint: Uri.parse('https://login.microsoftonline.com/common/oauth2/v2.0/authorize'),
+    tokenEndpoint: Uri.parse('https://login.microsoftonline.com/common/oauth2/v2.0/token'),
+    // revocationEndpoint is optional
+    revocationEndpoint: Uri.parse('https://example.com/revoke'),
+    // NOTE: For Android, we also have corresponding intent-filter entry on example/android/app/src/main/AndroidManifest.xml
+    redirectUri: Uri.parse('com.example.redirect43763246328://callback'),
+    clientId: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    clientSecret: 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+    scope: 'user.read',
+    useBasicAuth: false);
 
 class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Simple Azure AD OAuth2.0 Example'),
-      ),
-      body: Center(
-        child: OAuth2TokenHolder(
-          config: oauth2Config,
-          builder: (context, accessToken, state, authorize, deauthorize, child) => ListTile(title: RaisedButton(
-            onPressed:() => accessToken == null ? authorize() : deauthroizeConfirm(deauthorize),
-            child: state == OAuth2TokenAvailability.Authorizing
-            ? const CircularProgressIndicator()
-            : Text(accessToken == null ? 'Authorize' : 'Deauthorize'))
-          )
-        )
-      )
-    );
+        appBar: AppBar(
+          title: Text('Simple Azure AD OAuth2.0 Example'),
+        ),
+        body: Center(
+            child: OAuth2TokenHolder(
+                config: oauth2Config,
+                builder: (context, accessToken, state, authorize, deauthorize, child) => ListTile(
+                    title: ElevatedButton(
+                        onPressed: () => accessToken == null ? authorize() : deauthorizeConfirm(deauthorize),
+                        child: state == OAuth2TokenAvailability.Authorizing
+                            ? const CircularProgressIndicator()
+                            : Text(accessToken == null ? 'Authorize' : 'Deauthorize'))))));
   }
 
   /// NOTE: it's your app's responsibility to interact with the user; the deauthorize function does not interact with him/her.
-  Future<bool> deauthroizeConfirm(void deauthorize()) async {
+  Future<bool> deauthorizeConfirm(void deauthorize()) async {
     final ret = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Deauthorize App'),
-        content: Text('Do you really want to deauthorize the app?'),
-        actions: <Widget>[
-          FlatButton(child: Text("Cancel"), onPressed: () => Navigator.of(context).pop(false)),
-          FlatButton(child: Text("Deauthorize"), onPressed: () => Navigator.of(context).pop(true))
-        ]
-      )
-    );
+        context: context,
+        builder: (context) => AlertDialog(
+                title: Text('Deauthorize App'),
+                content: Text('Do you really want to deauthorize the app?'),
+                actions: <Widget>[
+                  TextButton(child: Text("Cancel"), onPressed: () => Navigator.of(context).pop(false)),
+                  TextButton(child: Text("Deauthorize"), onPressed: () => Navigator.of(context).pop(true))
+                ]));
     if (ret) {
       deauthorize();
     }
