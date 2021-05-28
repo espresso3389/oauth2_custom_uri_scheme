@@ -12,7 +12,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:reader_writer_lock/reader_writer_lock.dart';
+import 'package:synchronized/synchronized.dart';
 
 /// [uri] is the URI of request invocation.
 /// [query] is the actual query passed to the URI.
@@ -51,7 +51,7 @@ class AccessToken {
   /// By default, the [object] is forwarded to [core.print]. But you can change the behavior by settings [printHandler].
   void print(Object object, {StackTrace stackTrace}) => _print(object, accessToken: this, stackTrace: stackTrace);
 
-  final rwlock = ReaderWriterLock();
+  final lock = Lock();
 
   /// Token endpoint URL.
   final Uri tokenEndpoint;
@@ -219,7 +219,7 @@ class AccessToken {
           if (!completer.isCompleted) completer.complete(null); // canceled
         });
         browser.open(
-            url: authUrl.toString(),
+            url: authUrl,
             options: ChromeSafariBrowserClassOptions(
                 android: AndroidChromeCustomTabsOptions(addDefaultShareMenuItem: false)));
 
@@ -317,7 +317,7 @@ class AccessToken {
   }
 
   Future<void> _updateToken({Map<String, String> query, OAuth2ResponseCallback responseCallback}) async {
-    await rwlock.writerLock(() async {
+    await lock.synchronized(() async {
       final res = await _sendRequest(tokenEndpoint, query: query, responseCallback: responseCallback);
       final error = res['error'];
       if (error != null) {
@@ -383,7 +383,7 @@ class AccessToken {
       @required Uri uri,
       @required Map<String, dynamic> json,
       bool neverThrowOnNon2XX}) async {
-    return await rwlock.readerLock(() async {
+    return await lock.synchronized(() async {
       final req = await createRequest(method, uri, json: json);
       final res = await req.send();
       if (res.statusCode ~/ 100 != 2 && neverThrowOnNon2XX != true) {
@@ -414,7 +414,7 @@ class AccessToken {
 
   /// Fetch (`GET`) the specified URL.
   Future<ByteStream> getByteStreamFromUri(Uri uri, {bool neverThrowOnNon2XX}) async {
-    return await rwlock.readerLock(() async {
+    return await lock.synchronized(() async {
       final req = await createRequest('GET', uri);
       final res = await req.send();
       if (res.statusCode ~/ 100 != 2 && neverThrowOnNon2XX != true) {
@@ -443,7 +443,7 @@ class AccessToken {
   }
 
   static String _sha256str(String random) =>
-      base64Url.encode(sha256.newInstance().convert(random.codeUnits).bytes).replaceAll('=', '');
+      base64Url.encode(sha256.convert(random.codeUnits).bytes).replaceAll('=', '');
 }
 
 /// Cache for [AccessToken] instances.
