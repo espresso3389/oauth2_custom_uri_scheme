@@ -5,8 +5,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart';
@@ -18,12 +16,12 @@ import 'package:synchronized/synchronized.dart';
 /// [query] is the actual query passed to the URI.
 /// [statusCode] is the HTTP status code.
 /// [response] is the response returned by the server.
-typedef OAuth2ResponseCallback = void Function(Uri uri, Map<String, String> query, int statusCode, dynamic response);
+typedef OAuth2ResponseCallback = void Function(Uri uri, Map<String, String?> query, int statusCode, dynamic response);
 
 /// [object] is the object to print.
 /// [accessToken] is [AccessToken] object unless the message is from static function call.
 /// [stackTrace] may be the stack trace if the message is an exception like thing; otherwise null.
-typedef AccessTokenPrintHandler = void Function(Object object, AccessToken accessToken, StackTrace stackTrace);
+typedef AccessTokenPrintHandler = void Function(Object object, AccessToken? accessToken, StackTrace? stackTrace);
 
 /// [OAuth 2.0 (RFC 6749)](https://tools.ietf.org/html/rfc6749) Access token.
 class AccessToken {
@@ -31,7 +29,7 @@ class AccessToken {
   static final _eventChannel = EventChannel('oauth2_custom_uri_scheme/events');
   static final Stream<dynamic> _eventStream = _eventChannel.receiveBroadcastStream();
 
-  static AccessTokenPrintHandler _printHandler;
+  static AccessTokenPrintHandler? _printHandler;
 
   /// All [print] calls are finally redirected to the handler if set.
   /// [accessToken] is set if called from non-static function.
@@ -40,16 +38,16 @@ class AccessToken {
     _printHandler = handler;
   }
 
-  static void _print(Object object, {AccessToken accessToken, StackTrace stackTrace}) {
+  static void _print(Object object, {AccessToken? accessToken, StackTrace? stackTrace}) {
     if (_printHandler != null) {
-      _printHandler(object, accessToken, stackTrace);
+      _printHandler!(object, accessToken, stackTrace);
     } else {
       core.print(object);
     }
   }
 
   /// By default, the [object] is forwarded to [core.print]. But you can change the behavior by settings [printHandler].
-  void print(Object object, {StackTrace stackTrace}) => _print(object, accessToken: this, stackTrace: stackTrace);
+  void print(Object object, {StackTrace? stackTrace}) => _print(object, accessToken: this, stackTrace: stackTrace);
 
   final lock = Lock();
 
@@ -57,7 +55,7 @@ class AccessToken {
   final Uri tokenEndpoint;
 
   /// [Revocation (RFC 7009)](https://tools.ietf.org/html/rfc7009) endpoint URL if available.
-  final Uri revocationEndpoint;
+  final Uri? revocationEndpoint;
 
   /// Wether the server can accept `Authorization: Basic` on HTTP header or not. Certain services does not support it.
   final bool useBasicAuth;
@@ -67,13 +65,13 @@ class AccessToken {
   DateTime _timeStamp;
   Map<String, dynamic> _fields;
 
-  final List<OAuth2ResponseCallback> responseCallbacks;
+  final List<OAuth2ResponseCallback?> responseCallbacks;
 
   /// `access_token`; the access token.
-  String get accessToken => _fields['access_token'] as String;
+  String? get accessToken => _fields['access_token'] as String?;
 
   /// `token_type`; token type. Normally, it is `bearer`.
-  String get tokenType => _fields['token_type'] as String;
+  String? get tokenType => _fields['token_type'] as String?;
 
   /// `expires_in`; the token's life time in seconds.
   Duration get expiresIn => Duration(seconds: _fields['expires_in'] as int);
@@ -82,7 +80,7 @@ class AccessToken {
   DateTime get expiry => _timeStamp.add(expiresIn);
 
   /// `refresh_token`; the refresh token.
-  String get refreshToken => _fields['refresh_token'] as String;
+  String? get refreshToken => _fields['refresh_token'] as String?;
 
   /// Raw fields returned by the server (Unmodifiable).
   Map<String, dynamic> get fields => _fields;
@@ -91,7 +89,7 @@ class AccessToken {
   DateTime get timeStamp => _timeStamp;
 
   /// Authorization header type. Typically `Bearer`.
-  String get authorizationType => _authorizationType ?? 'Bearer';
+  String get authorizationType => _authorizationType;
 
   void _validateAndSetFields(Map<String, dynamic> fields) {
     if (fields['access_token'] is String && fields['token_type'] is String && fields['expires_in'] is int) {
@@ -103,15 +101,15 @@ class AccessToken {
   }
 
   AccessToken._(
-      {@required this.tokenEndpoint,
-      @required this.useBasicAuth,
-      @required String clientId,
-      @required String clientSecret,
+      {required this.tokenEndpoint,
+      required this.useBasicAuth,
+      required String clientId,
+      required String clientSecret,
       this.revocationEndpoint,
-      String authorizationType,
-      DateTime timeStamp,
-      Map<String, dynamic> fields,
-      List<OAuth2ResponseCallback> responseCallbacks})
+      required String authorizationType,
+      DateTime? timeStamp,
+      Map<String, dynamic>? fields,
+      List<OAuth2ResponseCallback?>? responseCallbacks})
       : this._clientId = clientId,
         this._clientSecret = clientSecret,
         this._authorizationType = authorizationType,
@@ -131,7 +129,7 @@ class AccessToken {
       });
 
   /// Deserialize [AccessToken] from [jsonStr]. If [jsonStr] is null, the function returns null.
-  static AccessToken deserialize(String jsonStr) {
+  static AccessToken? deserialize(String? jsonStr) {
     if (jsonStr == null) {
       return null;
     }
@@ -139,7 +137,7 @@ class AccessToken {
     return AccessToken._(
         tokenEndpoint: Uri.parse(json['tokenEndpoint']),
         revocationEndpoint: _uriParseNullSafe(json['revocationEndpoint']),
-        useBasicAuth: json['useBasicAuth'],
+        useBasicAuth: json['useBasicAuth'] ?? true,
         clientId: json['clientId'],
         clientSecret: json['clientSecret'],
         authorizationType: json['authorizationType'],
@@ -147,27 +145,27 @@ class AccessToken {
         fields: json['fields']);
   }
 
-  static Uri _uriParseNullSafe(String uri) => uri != null ? Uri.parse(uri) : null;
+  static Uri? _uriParseNullSafe(String? uri) => uri != null ? Uri.parse(uri) : null;
 
   /// Authorize the user and return an [AccessToken] or null.
   /// If [idForCache] is specified, the token may be restored from cache and if a token is newly obtained, the token will be saved on the cache. See [AccessTokenStore] for more.
-  static Future<AccessToken> authorize(
-      {@required Uri authorizationEndpoint,
-      @required Uri tokenEndpoint,
-      Uri revocationEndpoint,
-      String authorizationType,
-      @required Uri redirectUri,
-      @required String clientId,
-      @required String clientSecret,
-      String login,
-      String scope,
-      List<String> scopes,
+  static Future<AccessToken?> authorize(
+      {required Uri authorizationEndpoint,
+      required Uri tokenEndpoint,
+      Uri? revocationEndpoint,
+      String authorizationType = 'Bearer',
+      required Uri redirectUri,
+      required String clientId,
+      required String clientSecret,
+      String? login,
+      String? scope,
+      List<String>? scopes,
       bool useBasicAuth = true,
       bool usePkce = true,
-      Map<String, String> additionalQueryParams,
-      String idForCache,
-      String storeId,
-      OAuth2ResponseCallback responseCallback}) async {
+      Map<String, String>? additionalQueryParams,
+      String? idForCache,
+      String? storeId,
+      OAuth2ResponseCallback? responseCallback}) async {
     try {
       if (idForCache != null) {
         final cachedToken = await AccessTokenStore.fromId(storeId).getSavedToken(id: idForCache);
@@ -204,7 +202,7 @@ class AccessToken {
 
       final authUrl = authorizationEndpoint.replace(queryParameters: queryParams);
 
-      String redUrlStr;
+      String? redUrlStr;
       if (Platform.isAndroid) {
         await _methodChannel.invokeMethod('customScheme', redirectUri.scheme);
 
@@ -276,13 +274,13 @@ class AccessToken {
   }
 
   /// Refresh access token immediately.
-  Future<void> refresh({OAuth2ResponseCallback responseCallback}) => _updateToken(
+  Future<void> refresh({OAuth2ResponseCallback? responseCallback}) => _updateToken(
       query: {'grant_type': 'refresh_token', 'refresh_token': refreshToken}, responseCallback: responseCallback);
 
   /// Refresh access token if needed.
   /// Because [expiry] is calculated on client side after receiving the access token, the access token may be invalidated a little before
   /// it; if [error] is set, the access token is refreshed before the calculated [expiry].
-  Future<bool> refreshIfNeeded({Duration graceTime, OAuth2ResponseCallback responseCallback}) async {
+  Future<bool> refreshIfNeeded({Duration? graceTime, OAuth2ResponseCallback? responseCallback}) async {
     if (isAboutToExpire(graceTime: graceTime)) {
       if (refreshToken == null) {
         throw Exception('No refresh_token. need to re-authorize.');
@@ -293,30 +291,30 @@ class AccessToken {
     return false;
   }
 
-  bool isAboutToExpire({Duration graceTime}) {
+  bool isAboutToExpire({Duration? graceTime}) {
     graceTime ??= Duration(seconds: expiresIn.inSeconds ~/ 15); // 4 min. for 60 min. expiry
     return expiry.subtract(graceTime).compareTo(DateTime.now()) < 0;
   }
 
-  Future<dynamic> revoke({OAuth2ResponseCallback responseCallback}) async {
+  Future<dynamic> revoke({OAuth2ResponseCallback? responseCallback}) async {
     if (revocationEndpoint == null) {
       return null;
     }
     if (refreshToken != null) {
-      final err1 = await _sendRequest(revocationEndpoint,
+      final err1 = await _sendRequest(revocationEndpoint!,
           query: {'token': refreshToken, 'token_type_hint': 'refresh_token'}, responseCallback: responseCallback);
       if (err1 is Map<String, dynamic> && err1['error'] != null) {
         return err1;
       }
     }
-    final err2 = await _sendRequest(revocationEndpoint,
+    final err2 = await _sendRequest(revocationEndpoint!,
         query: {'token': accessToken, 'token_type_hint': 'access_token'}, responseCallback: responseCallback);
     if (err2 is Map<String, dynamic> && err2['error'] != null) {
       return err2;
     }
   }
 
-  Future<void> _updateToken({Map<String, String> query, OAuth2ResponseCallback responseCallback}) async {
+  Future<void> _updateToken({Map<String, String?>? query, OAuth2ResponseCallback? responseCallback}) async {
     await lock.synchronized(() async {
       final res = await _sendRequest(tokenEndpoint, query: query, responseCallback: responseCallback);
       final error = res['error'];
@@ -330,8 +328,8 @@ class AccessToken {
   }
 
   Future<dynamic> _sendRequest(Uri endpoint,
-      {Map<String, String> query, OAuth2ResponseCallback responseCallback}) async {
-    query ??= Map<String, String>();
+      {Map<String, String?>? query, OAuth2ResponseCallback? responseCallback}) async {
+    query ??= Map<String, String?>();
     final tokenReq = Request('POST', endpoint);
     if (useBasicAuth) {
       tokenReq.headers['Authorization'] = 'Basic ' + base64.encode('$_clientId:$_clientSecret'.codeUnits);
@@ -339,7 +337,7 @@ class AccessToken {
       query['client_id'] = _clientId;
       query['client_secret'] = _clientSecret;
     }
-    tokenReq.bodyFields = query;
+    tokenReq.bodyFields = query as core.Map<core.String, core.String>;
     final res = await tokenReq.send();
     final resStr = await res.stream.bytesToString();
     dynamic result;
@@ -358,7 +356,7 @@ class AccessToken {
   /// Save the token.
   /// [id] is used to uniquely identify the access token.
   /// If [allowOverwrite] is true, the function may overwrite existing token.
-  Future<bool> saveToken({@required String id, String storeId, bool allowOverwrite = true}) =>
+  Future<bool> saveToken({required String id, String? storeId, bool allowOverwrite = true}) =>
       AccessTokenStore.fromId(storeId).saveToken(token: this, id: id, allowOverwrite: allowOverwrite);
 
   /// Create a new HTTP request with bearer token. The function may refresh the token if needed.
@@ -366,7 +364,7 @@ class AccessToken {
   /// NOTE: You may encounter race-condition with background token refresh behavior. In that case,
   /// you can protect your sending request by calling [ReaderWriterLock.readerLock] with [rwlock].
   /// Or, you had better use nifty HTTP wrapper function on the class.
-  Future<Request> createRequest(String method, Uri uri, {Map<String, dynamic> json}) async {
+  Future<Request> createRequest(String method, Uri uri, {Map<String, dynamic>? json}) async {
     await refreshIfNeeded();
     final req = Request(method, uri);
     req.headers['Authorization'] = '$authorizationType $accessToken';
@@ -379,10 +377,7 @@ class AccessToken {
 
   /// Send a HTTP request with JSON and obtain [ByteStream].
   Future<ByteStream> requestByteStreamWithJson(
-      {@required String method,
-      @required Uri uri,
-      @required Map<String, dynamic> json,
-      bool neverThrowOnNon2XX}) async {
+      {required String method, required Uri uri, required Map<String, dynamic> json, bool? neverThrowOnNon2XX}) async {
     return await lock.synchronized(() async {
       final req = await createRequest(method, uri, json: json);
       final res = await req.send();
@@ -395,25 +390,25 @@ class AccessToken {
 
   /// Send a HTTP request with JSON and obtain [String].
   Future<String> requestStringWithJson(
-          {@required String method,
-          @required Uri uri,
-          @required Map<String, dynamic> json,
-          bool neverThrowOnNon2XX}) async =>
+          {required String method,
+          required Uri uri,
+          required Map<String, dynamic> json,
+          bool? neverThrowOnNon2XX}) async =>
       await (await requestByteStreamWithJson(
               method: method, uri: uri, json: json, neverThrowOnNon2XX: neverThrowOnNon2XX))
           .bytesToString();
 
   /// Send a HTTP request with JSON and obtain JSON.
   Future<dynamic> requestJsonWithJson(
-          {@required String method,
-          @required Uri uri,
-          @required Map<String, dynamic> json,
-          bool neverThrowOnNon2XX}) async =>
+          {required String method,
+          required Uri uri,
+          required Map<String, dynamic> json,
+          bool? neverThrowOnNon2XX}) async =>
       jsonDecode(
           await requestStringWithJson(method: method, uri: uri, json: json, neverThrowOnNon2XX: neverThrowOnNon2XX));
 
   /// Fetch (`GET`) the specified URL.
-  Future<ByteStream> getByteStreamFromUri(Uri uri, {bool neverThrowOnNon2XX}) async {
+  Future<ByteStream> getByteStreamFromUri(Uri uri, {bool? neverThrowOnNon2XX}) async {
     return await lock.synchronized(() async {
       final req = await createRequest('GET', uri);
       final res = await req.send();
@@ -425,11 +420,11 @@ class AccessToken {
   }
 
   /// Fetch (`GET`) the specified URL.
-  Future<String> getStringFromUri(Uri uri, {bool neverThrowOnNon2XX}) async =>
+  Future<String> getStringFromUri(Uri uri, {bool? neverThrowOnNon2XX}) async =>
       await (await getByteStreamFromUri(uri, neverThrowOnNon2XX: neverThrowOnNon2XX)).bytesToString();
 
   /// Fetch (`GET`) the specified URL.
-  Future<dynamic> getJsonFromUri(Uri uri, {bool neverThrowOnNon2XX}) async =>
+  Future<dynamic> getJsonFromUri(Uri uri, {bool? neverThrowOnNon2XX}) async =>
       jsonDecode(await getStringFromUri(uri, neverThrowOnNon2XX: neverThrowOnNon2XX));
 
   ///  high-entropy cryptographic random string defined [RFC7636 Section 4.1](https://tools.ietf.org/html/rfc7636#section-4.1).
@@ -450,16 +445,16 @@ class AccessToken {
 /// It is implemented upon iOS's [Keychain](https://developer.apple.com/documentation/security/keychain_services#//apple_ref/doc/uid/TP30000897-CH203-TP1) or Android's [Keystore](https://developer.android.com/training/articles/keystore.html).
 class AccessTokenStore {
   /// Used to select a credential store. It can be null and the default store is selected. It may be any string that uniquely identify the store.
-  final String storeId;
+  final String? storeId;
 
   AccessTokenStore._({this.storeId});
 
-  static AccessTokenStore fromId(String storeId) => AccessTokenStore._(storeId: storeId ?? '');
+  static AccessTokenStore fromId(String? storeId) => AccessTokenStore._(storeId: storeId ?? '');
 
   String get _storePrefix => storeId != null ? '~oauth2~$storeId~' : '~!oauth2!~global~';
 
   /// Get all saved tokens. If no token is saved, or no such store found, the function returns empty Map.
-  Future<Map<String, AccessToken>> getSavedTokens() async {
+  Future<Map<String, AccessToken?>> getSavedTokens() async {
     final storePrefix = _storePrefix;
     final storage = FlutterSecureStorage();
     final allValues = await storage.readAll();
@@ -469,14 +464,14 @@ class AccessTokenStore {
   }
 
   /// Get saved token of the specified [id] if available; otherwise null.
-  Future<AccessToken> getSavedToken({@required String id}) async {
+  Future<AccessToken?> getSavedToken({required String id}) async {
     final storePrefix = _storePrefix;
     final storage = FlutterSecureStorage();
     return AccessToken.deserialize(await storage.read(key: storePrefix + id));
   }
 
   /// Remove tokens of specified IDs.
-  Future<void> removeSavedTokens({@required Iterable<String> ids}) async {
+  Future<void> removeSavedTokens({required Iterable<String> ids}) async {
     final storePrefix = _storePrefix;
     final storage = FlutterSecureStorage();
     for (var id in ids) {
@@ -497,7 +492,7 @@ class AccessTokenStore {
   /// Save the token.
   /// [id] is used to uniquely identify the access token.
   /// If [allowOverwrite] is true, the function may overwrite existing token.
-  Future<bool> saveToken({@required AccessToken token, @required String id, bool allowOverwrite = true}) async {
+  Future<bool> saveToken({required AccessToken token, required String id, bool allowOverwrite = true}) async {
     final key = _storePrefix + id;
     final storage = FlutterSecureStorage();
     if (!allowOverwrite && (await storage.read(key: key)) != null) {
@@ -514,7 +509,7 @@ class OAuth2Config {
   final String uniqueId;
   final Uri authorizationEndpoint;
   final Uri tokenEndpoint;
-  final Uri revocationEndpoint;
+  final Uri? revocationEndpoint;
   final Uri redirectUri;
 
   /// Client ID
@@ -526,15 +521,16 @@ class OAuth2Config {
   /// And therefore apps installed on client devices are called "public" clients. See [RFC 6749 2.1. Client Types](https://tools.ietf.org/html/rfc6749#section-2.1) for more info.
   final String clientSecret;
 
-  /// Set token type on `Authorization` header. null to use `Bearer`.
+  /// Set token type on `Authorization` header. The default is `Bearer`.
   final String authorizationType;
-  final String login;
+
+  final String? login;
 
   /// Space delimited scope values. Mutually exclusive with [scopes].
-  final String scope;
+  final String? scope;
 
   /// Scope values. Mutually exclusive with [scope].
-  final List<String> scopes;
+  final List<String>? scopes;
 
   /// Wether the server can accept `Authorization: Basic` on HTTP header or not. Certain services does not support it.
   final bool useBasicAuth;
@@ -544,19 +540,19 @@ class OAuth2Config {
   final bool usePkce;
 
   /// Additional query params that are not directly supported by the plugin.
-  final Map<String, String> additionalQueryParams;
-  final String storeId;
-  final OAuth2ResponseCallback responseCallback;
+  final Map<String, String>? additionalQueryParams;
+  final String? storeId;
+  final OAuth2ResponseCallback? responseCallback;
 
   OAuth2Config(
-      {@required this.uniqueId,
-      @required this.authorizationEndpoint,
-      @required this.tokenEndpoint,
+      {required this.uniqueId,
+      required this.authorizationEndpoint,
+      required this.tokenEndpoint,
       this.revocationEndpoint,
-      @required this.redirectUri,
-      @required this.clientId,
-      @required this.clientSecret,
-      this.authorizationType,
+      required this.redirectUri,
+      required this.clientId,
+      required this.clientSecret,
+      this.authorizationType = 'Bearer',
       this.login,
       this.scope,
       this.scopes,
@@ -566,11 +562,11 @@ class OAuth2Config {
       this.storeId,
       this.responseCallback});
 
-  Future<AccessToken> getAccessTokenFromCache() => AccessTokenStore.fromId(storeId).getSavedToken(id: uniqueId);
+  Future<AccessToken?> getAccessTokenFromCache() => AccessTokenStore.fromId(storeId).getSavedToken(id: uniqueId);
 
   /// Start authorization process. It may return cached access token if [uniqueId] is set.
   /// If [reset] is true, authorization clears the cache before authorization and it always do interactive authorization.
-  Future<AccessToken> authorize({bool reset = false}) async {
+  Future<AccessToken?> authorize({bool reset = false}) async {
     if (reset) {
       await AccessTokenStore.fromId(storeId).removeSavedTokens(ids: [uniqueId]);
     }
@@ -598,7 +594,7 @@ class OAuth2Config {
 }
 
 class EmbeddedChromeBrowser extends ChromeSafariBrowser {
-  final Function onClose;
+  final Function? onClose;
 
   EmbeddedChromeBrowser({this.onClose});
 

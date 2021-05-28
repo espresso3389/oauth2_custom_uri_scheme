@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key}) : super(key: key);
+  MyHomePage({Key? key}) : super(key: key);
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -66,9 +66,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   TextButton(child: Text("Cancel"), onPressed: () => Navigator.of(context).pop(false)),
                   TextButton(child: Text("Deauthorize"), onPressed: () => Navigator.of(context).pop(true))
                 ]));
-    if (ret) {
+    if (ret == true) {
       deauthorize();
     }
-    return ret;
+    return ret == true;
   }
 }

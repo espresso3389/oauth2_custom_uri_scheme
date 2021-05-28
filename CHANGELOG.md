@@ -1,3 +1,7 @@
+## 1.0.0-alpha
+
+* First version that support null-safety (Not yet fully tested).
+
 ## 0.4.6/0.4.7
 
 * AccessToken.authorize introduces usePkce (the default is true) parameter to support certain IdP that does not support PKCE but return errors on PKCE related fields.
@@ -33,7 +37,7 @@
 
 ## 0.3.11
 
-* ASWebAuthenticationSession.start sliently fails on iOS13 due to breaking changes.
+* ASWebAuthenticationSession.start silently fails on iOS13 due to breaking changes.
 
 ## 0.3.10
 
